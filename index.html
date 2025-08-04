@@ -1,20 +1,24 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>WebAR Image Tracking Example</title>
+    <title>MindAR Image Tracking with Audio & Photo Countdown</title>
     <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
   </head>
-  <body>
+  <body style="margin: 0; overflow: hidden;">
+
+    <!-- AR Scene -->
     <a-scene mindar-image="imageTargetSrc: targets.mind; autoStart: true;" 
              vr-mode-ui="enabled: false" 
              device-orientation-permission-ui="enabled: false">
       <a-assets>
         <a-asset-item id="hellboy-model" src="gentleman_hellboy.glb"></a-asset-item>
       </a-assets>
+
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 1" position="2 2 2"></a-entity>
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
       <a-entity mindar-image-target="targetIndex: 0">
         <a-gltf-model 
             src="#hellboy-model" 
@@ -23,5 +27,120 @@
         </a-gltf-model>
       </a-entity>
     </a-scene>
+
+    <!-- Controls -->
+    <div style="position: absolute; top: 10px; left: 10px; z-index: 10;">
+      <button id="startBtn">Start Recording</button>
+      <button id="stopBtn" disabled>Stop Recording</button>
+      <button id="photoBtn">📸 Take Photo</button>
+      <a id="downloadLink" style="display:none; margin-left:10px;">⬇️ Download</a>
+    </div>
+
+    <!-- Countdown Display -->
+    <div id="countdown" style="position: absolute; top: 50%; left: 50%; 
+         transform: translate(-50%, -50%); font-size: 80px; 
+         color: red; font-weight: bold; z-index: 20; display: none;">
+    </div>
+
+    <!-- Video Preview -->
+    <video id="preview" controls 
+           style="position: absolute; bottom: 10px; left: 10px; width: 300px; z-index: 10;">
+    </video>
+
+    <script>
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const photoBtn = document.getElementById("photoBtn");
+      const video = document.getElementById("preview");
+      const downloadLink = document.getElementById("downloadLink");
+      const countdownEl = document.getElementById("countdown");
+
+      let mediaRecorder;
+      let recordedChunks = [];
+
+      async function getCombinedStream() {
+        const canvas = document.querySelector("canvas");
+        const canvasStream = canvas.captureStream(30); // video from canvas
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        const combinedStream = new MediaStream([
+          ...canvasStream.getVideoTracks(),
+          ...audioStream.getAudioTracks()
+        ]);
+        
+        return combinedStream;
+      }
+
+      // Video Recording with Audio
+      startBtn.onclick = async () => {
+        const stream = await getCombinedStream();
+        recordedChunks = [];
+
+        mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: "video/webm" });
+          const url = URL.createObjectURL(blob);
+          video.src = url;
+          video.play();
+
+          downloadLink.href = url;
+          downloadLink.download = "ar-recording-with-audio.webm";
+          downloadLink.innerText = "⬇️ Download Video";
+          downloadLink.style.display = "inline-block";
+        };
+
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+      };
+
+      stopBtn.onclick = () => {
+        mediaRecorder.stop();
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      };
+
+      // Countdown for photo
+      function startCountdown(seconds) {
+        return new Promise((resolve) => {
+          let remaining = seconds;
+          countdownEl.innerText = remaining;
+          countdownEl.style.display = "block";
+
+          const interval = setInterval(() => {
+            remaining -= 1;
+            if (remaining > 0) {
+              countdownEl.innerText = remaining;
+            } else {
+              clearInterval(interval);
+              countdownEl.style.display = "none";
+              resolve();
+            }
+          }, 1000);
+        });
+      }
+
+      // Photo Capture with Countdown
+      photoBtn.onclick = async () => {
+        await startCountdown(3);
+        const canvas = document.querySelector("canvas");
+        const photoData = canvas.toDataURL("image/png");
+        
+        const link = document.createElement("a");
+        link.href = photoData;
+        link.download = "ar-photo.png";
+        link.click();
+
+        downloadLink.href = photoData;
+        downloadLink.download = "ar-photo.png";
+        downloadLink.innerText = "⬇️ Download Photo";
+        downloadLink.style.display = "inline-block";
+      };
+    </script>
   </body>
 </html>
