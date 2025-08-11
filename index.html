@@ -39,7 +39,6 @@
       <button id="startBtn">Start Recording</button>
       <button id="stopBtn" disabled>Stop Recording</button>
       <button id="photoBtn">📸 Take Photo</button>
-      <a id="downloadLink" style="display:none; margin-left:10px;">⬇️ Download</a>
     </div>
 
     <!-- Countdown Display -->
@@ -52,7 +51,6 @@
       const startBtn = document.getElementById("startBtn");
       const stopBtn = document.getElementById("stopBtn");
       const photoBtn = document.getElementById("photoBtn");
-      const downloadLink = document.getElementById("downloadLink");
       const countdownEl = document.getElementById("countdown");
 
       let mediaRecorder;
@@ -71,6 +69,20 @@
         return combinedStream;
       }
 
+      function autoDownload(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.style.display = "none";
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+          document.body.removeChild(link);
+        }, 100);
+      }
+
       // Video Recording with Audio
       startBtn.onclick = async () => {
         const stream = await getCombinedStream();
@@ -84,12 +96,7 @@
 
         mediaRecorder.onstop = () => {
           const blob = new Blob(recordedChunks, { type: "video/webm" });
-          const url = URL.createObjectURL(blob);
-
-          downloadLink.href = url;
-          downloadLink.download = "ar-recording-with-audio.webm";
-          downloadLink.innerText = "⬇️ Download Video";
-          downloadLink.style.display = "inline-block";
+          autoDownload(blob, "ar-recording-with-audio.webm");
         };
 
         mediaRecorder.start();
@@ -123,24 +130,15 @@
         });
       }
 
-      // Photo Capture with Countdown
+      // Photo Capture with Countdown and Auto Download
       photoBtn.onclick = async () => {
         await startCountdown(3);
         const canvas = document.querySelector("canvas");
-        const photoData = canvas.toDataURL("image/png");
-        
-        const link = document.createElement("a");
-        link.href = photoData;
-        link.download = "ar-photo.png";
-        link.click();
-
-        downloadLink.href = photoData;
-        downloadLink.download = "ar-photo.png";
-        downloadLink.innerText = "⬇️ Download Photo";
-        downloadLink.style.display = "inline-block";
+        canvas.toBlob(blob => {
+          autoDownload(blob, "ar-photo.png");
+        }, "image/png");
       };
     </script>
   </body>
 </html>
-
 
