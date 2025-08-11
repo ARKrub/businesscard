@@ -5,17 +5,12 @@
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
   <style>
-    /* Fullscreen canvas & background */
     html, body, a-scene {
       margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: black;
     }
-
-    /* Hide AR camera feed video element */
     body > video[playsinline] {
       display: none !important;
     }
-
-    /* Circular red button like camera app */
     #captureBtn {
       position: fixed;
       bottom: 40px;
@@ -31,21 +26,16 @@
       user-select: none;
       z-index: 1000;
     }
-
-    /* Visual feedback for recording */
     #captureBtn.recording {
       animation: pulse 1s infinite;
       box-shadow: 0 0 20px rgba(255, 0, 0, 1);
       border-color: #ff6666;
     }
-
     @keyframes pulse {
       0% { transform: translateX(-50%) scale(1); }
       50% { transform: translateX(-50%) scale(1.2); }
       100% { transform: translateX(-50%) scale(1); }
     }
-
-    /* Countdown */
     #countdown {
       position: fixed;
       top: 50%;
@@ -181,7 +171,7 @@
     const now = Date.now();
     if (now - lastTap < 300) {
       // double tap detected -> take photo
-      if (isRecording) stopRecording(); // stop if recording
+      if (isRecording) stopRecording();
       await takePhoto();
     } else {
       // single tap -> toggle recording
