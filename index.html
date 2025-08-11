@@ -1,63 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <title>MindAR Manual Start Camera Test</title>
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
-  <style>
-    html, body, a-scene {
-      margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: black;
-    }
-    body > video[playsinline] {
-      display: none !important;
-    }
-  </style>
-</head>
+<html>
+<head><title>Camera Test</title></head>
 <body>
-
-<a-scene
-  mindar-image="imageTargetSrc: targets.mind; autoStart: false"
-  embedded
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: true"
->
-  <a-entity light="type: ambient; intensity: 1"></a-entity>
-  <a-entity light="type: directional; intensity: 1" position="2 2 2"></a-entity>
-  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-  <a-entity mindar-image-target="targetIndex: 0">
-    <a-box position="0 0.5 0" color="red"></a-box>
-  </a-entity>
-</a-scene>
-
+<video id="video" autoplay playsinline style="width:100%; height:auto; background:black;"></video>
 <script>
-  const scene = document.querySelector('a-scene');
-
-  scene.addEventListener('renderstart', async () => {
-    console.log('Scene renderstart - ready to start MindAR');
-
+  async function startCamera() {
     try {
-      const mindar = scene.components['mindar-image'];
-      await mindar.start();
-      console.log('MindAR started successfully');
-    } catch (error) {
-      console.error('Error starting MindAR:', error);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      document.getElementById('video').srcObject = stream;
+      console.log("Camera started");
+    } catch (e) {
+      console.error("Camera error:", e);
+      alert("Camera error: " + e.message);
     }
-  });
-
-  scene.addEventListener('mindar-image-target-loaded', e => {
-    console.log('MindAR: target loaded', e);
-  });
-  scene.addEventListener('mindar-initialized', e => {
-    console.log('MindAR: initialized', e);
-  });
-  scene.addEventListener('mindar-started', e => {
-    console.log('MindAR: started', e);
-  });
-  scene.addEventListener('mindar-error', e => {
-    console.error('MindAR error:', e.detail);
-  });
+  }
+  startCamera();
 </script>
-
 </body>
 </html>
