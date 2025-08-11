@@ -9,14 +9,31 @@
       body > video[playsinline] {
         display: none !important;
       }
+      /* Optional: hide MindAR UI messages */
+      #mindar-ui {
+        display: none !important;
+      }
+      /* Fullscreen canvas fix */
+      body, html, a-scene {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: black;
+      }
     </style>
   </head>
-  <body style="margin: 0; overflow: hidden;">
+  <body>
 
     <!-- AR Scene -->
-    <a-scene mindar-image="imageTargetSrc: targets.mind; autoStart: true;" 
-             vr-mode-ui="enabled: false" 
-             device-orientation-permission-ui="enabled: false">
+    <a-scene
+      mindar-image="imageTargetSrc: targets.mind; autoStart: true; uiLoading: false; uiError: false; uiScanning: false"
+      embedded
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: true"
+      renderer="colorManagement: true; physicallyCorrectLights: true;"
+    >
       <a-assets>
         <a-asset-item id="hellboy-model" src="gentleman_hellboy.glb"></a-asset-item>
       </a-assets>
@@ -26,11 +43,11 @@
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-gltf-model 
-            src="#hellboy-model" 
-            position="0 1 0" 
-            scale=".010 .010 .010">
-        </a-gltf-model>
+        <a-gltf-model
+          src="#hellboy-model"
+          position="0 1 0"
+          scale=".010 .010 .010"
+        ></a-gltf-model>
       </a-entity>
     </a-scene>
 
@@ -42,10 +59,20 @@
     </div>
 
     <!-- Countdown Display -->
-    <div id="countdown" style="position: absolute; top: 50%; left: 50%; 
-         transform: translate(-50%, -50%); font-size: 80px; 
-         color: red; font-weight: bold; z-index: 20; display: none;">
-    </div>
+    <div
+      id="countdown"
+      style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 80px;
+        color: red;
+        font-weight: bold;
+        z-index: 20;
+        display: none;
+      "
+    ></div>
 
     <script>
       const startBtn = document.getElementById("startBtn");
@@ -60,12 +87,12 @@
         const canvas = document.querySelector("canvas");
         const canvasStream = canvas.captureStream(30); // video from canvas
         const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
+
         const combinedStream = new MediaStream([
           ...canvasStream.getVideoTracks(),
-          ...audioStream.getAudioTracks()
+          ...audioStream.getAudioTracks(),
         ]);
-        
+
         return combinedStream;
       }
 
@@ -134,7 +161,7 @@
       photoBtn.onclick = async () => {
         await startCountdown(3);
         const canvas = document.querySelector("canvas");
-        canvas.toBlob(blob => {
+        canvas.toBlob((blob) => {
           autoDownload(blob, "ar-photo.png");
         }, "image/png");
       };
