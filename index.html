@@ -4,6 +4,12 @@
     <title>MindAR Image Tracking with Audio & Photo Countdown</title>
     <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      /* Hide AR camera feed video element */
+      body > video[playsinline] {
+        display: none !important;
+      }
+    </style>
   </head>
   <body style="margin: 0; overflow: hidden;">
 
@@ -136,4 +142,5 @@
     </script>
   </body>
 </html>
+
 
