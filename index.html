@@ -1,171 +1,199 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>MindAR Image Tracking with Audio & Photo Countdown</title>
-    <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
-    <style>
-      /* Hide AR camera feed video element */
-      body > video[playsinline] {
-        display: none !important;
+<head>
+  <title>MindAR AR Recorder</title>
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    /* Fullscreen canvas & background */
+    html, body, a-scene {
+      margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: black;
+    }
+
+    /* Hide AR camera feed video element */
+    body > video[playsinline] {
+      display: none !important;
+    }
+
+    /* Circular red button like camera app */
+    #captureBtn {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 80px;
+      background: red;
+      border-radius: 50%;
+      border: 5px solid white;
+      box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+      cursor: pointer;
+      user-select: none;
+      z-index: 1000;
+    }
+
+    /* Visual feedback for recording */
+    #captureBtn.recording {
+      animation: pulse 1s infinite;
+      box-shadow: 0 0 20px rgba(255, 0, 0, 1);
+      border-color: #ff6666;
+    }
+
+    @keyframes pulse {
+      0% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.2); }
+      100% { transform: translateX(-50%) scale(1); }
+    }
+
+    /* Countdown */
+    #countdown {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 100px;
+      font-weight: bold;
+      color: red;
+      user-select: none;
+      z-index: 1001;
+      display: none;
+      text-shadow: 0 0 5px black;
+    }
+  </style>
+</head>
+<body>
+
+  <a-scene
+    mindar-image="imageTargetSrc: targets.mind; autoStart: true"
+    embedded
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: true"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
+  >
+    <a-assets>
+      <a-asset-item id="hellboy-model" src="gentleman_hellboy.glb"></a-asset-item>
+    </a-assets>
+
+    <a-entity light="type: ambient; intensity: 1"></a-entity>
+    <a-entity light="type: directional; intensity: 1" position="2 2 2"></a-entity>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-gltf-model
+        src="#hellboy-model"
+        position="0 1 0"
+        scale=".010 .010 .010"
+      ></a-gltf-model>
+    </a-entity>
+  </a-scene>
+
+  <div id="captureBtn" title="Tap to start/stop recording. Double tap for photo."></div>
+  <div id="countdown"></div>
+
+<script>
+  const captureBtn = document.getElementById('captureBtn');
+  const countdownEl = document.getElementById('countdown');
+
+  let mediaRecorder;
+  let recordedChunks = [];
+  let isRecording = false;
+  let lastTap = 0;
+
+  async function getCombinedStream() {
+    const canvas = document.querySelector('canvas');
+    const canvasStream = canvas.captureStream(30);
+    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    return new MediaStream([
+      ...canvasStream.getVideoTracks(),
+      ...audioStream.getAudioTracks()
+    ]);
+  }
+
+  function autoDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.style.display = 'none';
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    }, 100);
+  }
+
+  function startCountdown(seconds) {
+    return new Promise(resolve => {
+      let remaining = seconds;
+      countdownEl.textContent = remaining;
+      countdownEl.style.display = 'block';
+
+      const interval = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+          countdownEl.textContent = remaining;
+        } else {
+          clearInterval(interval);
+          countdownEl.style.display = 'none';
+          resolve();
+        }
+      }, 1000);
+    });
+  }
+
+  async function startRecording() {
+    const stream = await getCombinedStream();
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+    mediaRecorder.ondataavailable = e => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      autoDownload(blob, 'ar-recording-with-audio.webm');
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    captureBtn.classList.add('recording');
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      isRecording = false;
+      captureBtn.classList.remove('recording');
+    }
+  }
+
+  async function takePhoto() {
+    await startCountdown(3);
+    const canvas = document.querySelector('canvas');
+    canvas.toBlob(blob => {
+      autoDownload(blob, 'ar-photo.png');
+    }, 'image/png');
+  }
+
+  captureBtn.addEventListener('click', async () => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      // double tap detected -> take photo
+      if (isRecording) stopRecording(); // stop if recording
+      await takePhoto();
+    } else {
+      // single tap -> toggle recording
+      if (isRecording) {
+        stopRecording();
+      } else {
+        await startRecording();
       }
-      /* Optional: hide MindAR UI messages */
-      #mindar-ui {
-        display: none !important;
-      }
-      /* Fullscreen canvas fix */
-      body, html, a-scene {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: black;
-      }
-    </style>
-  </head>
-  <body>
+    }
+    lastTap = now;
+  });
+</script>
 
-    <!-- AR Scene -->
-    <a-scene
-      mindar-image="imageTargetSrc: targets.mind; autoStart: true; uiLoading: false; uiError: false; uiScanning: false"
-      embedded
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: true"
-      renderer="colorManagement: true; physicallyCorrectLights: true;"
-    >
-      <a-assets>
-        <a-asset-item id="hellboy-model" src="gentleman_hellboy.glb"></a-asset-item>
-      </a-assets>
-
-      <a-entity light="type: ambient; intensity: 1"></a-entity>
-      <a-entity light="type: directional; intensity: 1" position="2 2 2"></a-entity>
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-gltf-model
-          src="#hellboy-model"
-          position="0 1 0"
-          scale=".010 .010 .010"
-        ></a-gltf-model>
-      </a-entity>
-    </a-scene>
-
-    <!-- Controls -->
-    <div style="position: absolute; bottom: 10px; left: 10px; z-index: 10;">
-      <button id="startBtn">Start Recording</button>
-      <button id="stopBtn" disabled>Stop Recording</button>
-      <button id="photoBtn">📸 Take Photo</button>
-    </div>
-
-    <!-- Countdown Display -->
-    <div
-      id="countdown"
-      style="
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 80px;
-        color: red;
-        font-weight: bold;
-        z-index: 20;
-        display: none;
-      "
-    ></div>
-
-    <script>
-      const startBtn = document.getElementById("startBtn");
-      const stopBtn = document.getElementById("stopBtn");
-      const photoBtn = document.getElementById("photoBtn");
-      const countdownEl = document.getElementById("countdown");
-
-      let mediaRecorder;
-      let recordedChunks = [];
-
-      async function getCombinedStream() {
-        const canvas = document.querySelector("canvas");
-        const canvasStream = canvas.captureStream(30); // video from canvas
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-        const combinedStream = new MediaStream([
-          ...canvasStream.getVideoTracks(),
-          ...audioStream.getAudioTracks(),
-        ]);
-
-        return combinedStream;
-      }
-
-      function autoDownload(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.style.display = "none";
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => {
-          URL.revokeObjectURL(url);
-          document.body.removeChild(link);
-        }, 100);
-      }
-
-      // Video Recording with Audio
-      startBtn.onclick = async () => {
-        const stream = await getCombinedStream();
-        recordedChunks = [];
-
-        mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) recordedChunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(recordedChunks, { type: "video/webm" });
-          autoDownload(blob, "ar-recording-with-audio.webm");
-        };
-
-        mediaRecorder.start();
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-      };
-
-      stopBtn.onclick = () => {
-        mediaRecorder.stop();
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-      };
-
-      // Countdown for photo
-      function startCountdown(seconds) {
-        return new Promise((resolve) => {
-          let remaining = seconds;
-          countdownEl.innerText = remaining;
-          countdownEl.style.display = "block";
-
-          const interval = setInterval(() => {
-            remaining -= 1;
-            if (remaining > 0) {
-              countdownEl.innerText = remaining;
-            } else {
-              clearInterval(interval);
-              countdownEl.style.display = "none";
-              resolve();
-            }
-          }, 1000);
-        });
-      }
-
-      // Photo Capture with Countdown and Auto Download
-      photoBtn.onclick = async () => {
-        await startCountdown(3);
-        const canvas = document.querySelector("canvas");
-        canvas.toBlob((blob) => {
-          autoDownload(blob, "ar-photo.png");
-        }, "image/png");
-      };
-    </script>
-  </body>
+</body>
 </html>
-
