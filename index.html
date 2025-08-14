@@ -6,7 +6,7 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
 </head>
-<body style="margin: 0; overflow: hidden;">
+<body style="margin:0; overflow:hidden;">
 
 <a-scene embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
   
@@ -14,17 +14,25 @@
   <a-marker type="pattern" url="img/business-card.patt">
 
     <!-- 3D Avatar -->
-    <a-entity gltf-model="model/avatar.glb" scale="0.5 0.5 0.5" position="0 0 0" rotation="0 180 0"></a-entity>
+    <a-entity id="avatar" gltf-model="model/avatar.glb"
+              scale="0.5 0.5 0.5"
+              position="0 0 0"
+              rotation="0 180 0">
+    </a-entity>
 
     <!-- Website Button -->
-    <a-entity id="btn-website" gltf-model="model/button_website.glb" scale="0.2 0.2 0.2"
-              position="-0.5 0 0" rotation="0 180 0"
+    <a-entity id="btn-website" gltf-model="model/button_website.glb"
+              scale="0.2 0.2 0.2"
+              position="-0.5 0 0"
+              rotation="0 180 0"
               class="clickable">
     </a-entity>
 
     <!-- LinkedIn Button -->
-    <a-entity id="btn-linkedin" gltf-model="model/button_linkedin.glb" scale="0.2 0.2 0.2"
-              position="0.5 0 0" rotation="0 180 0"
+    <a-entity id="btn-linkedin" gltf-model="model/button_linkedin.glb"
+              scale="0.2 0.2 0.2"
+              position="0.5 0 0"
+              rotation="0 180 0"
               class="clickable">
     </a-entity>
 
@@ -34,11 +42,12 @@
 </a-scene>
 
 <script>
-  // Listen for clicks on 3D buttons
+  // Wait until the scene is loaded
   document.addEventListener('DOMContentLoaded', () => {
     const websiteBtn = document.querySelector('#btn-website');
     const linkedinBtn = document.querySelector('#btn-linkedin');
 
+    // Add click events
     websiteBtn.addEventListener('click', () => {
       window.open('https://yourwebsite.com', '_blank');
     });
@@ -46,6 +55,18 @@
     linkedinBtn.addEventListener('click', () => {
       window.open('https://linkedin.com/in/yourprofile', '_blank');
     });
+
+    // Optional: make buttons rotate slowly
+    const rotateButton = (el) => {
+      let angle = 0;
+      setInterval(() => {
+        angle += 1;
+        el.setAttribute('rotation', `0 ${180 + angle} 0`);
+      }, 50);
+    };
+
+    rotateButton(websiteBtn);
+    rotateButton(linkedinBtn);
   });
 </script>
 
