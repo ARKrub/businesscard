@@ -3,21 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <title>AR Business Card</title>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/three.js/build/ar-threex.js"></script>
-  <style>
-    body { margin: 0; overflow: hidden; }
-    #overlay-buttons { position: absolute; top: 10px; left: 10px; z-index: 10; }
-    button { margin: 5px; padding: 10px; font-size: 16px; }
-  </style>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
 </head>
-<body>
-  <div id="overlay-buttons">
-    <button onclick="openLink('https://yourwebsite.com')">Website</button>
-    <button onclick="openLink('https://linkedin.com/in/yourprofile')">LinkedIn</button>
-  </div>
+<body style="margin: 0; overflow: hidden;">
 
-  <script src="script.js"></script>
+<a-scene embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
+  
+  <!-- Business Card Marker -->
+  <a-marker type="pattern" url="img/business-card.patt">
+
+    <!-- 3D Avatar -->
+    <a-entity gltf-model="model/avatar.glb" scale="0.5 0.5 0.5" position="0 0 0" rotation="0 180 0"></a-entity>
+
+    <!-- Website Button -->
+    <a-entity id="btn-website" gltf-model="model/button_website.glb" scale="0.2 0.2 0.2"
+              position="-0.5 0 0" rotation="0 180 0"
+              class="clickable">
+    </a-entity>
+
+    <!-- LinkedIn Button -->
+    <a-entity id="btn-linkedin" gltf-model="model/button_linkedin.glb" scale="0.2 0.2 0.2"
+              position="0.5 0 0" rotation="0 180 0"
+              class="clickable">
+    </a-entity>
+
+  </a-marker>
+
+  <a-entity camera></a-entity>
+</a-scene>
+
+<script>
+  // Listen for clicks on 3D buttons
+  document.addEventListener('DOMContentLoaded', () => {
+    const websiteBtn = document.querySelector('#btn-website');
+    const linkedinBtn = document.querySelector('#btn-linkedin');
+
+    websiteBtn.addEventListener('click', () => {
+      window.open('https://yourwebsite.com', '_blank');
+    });
+
+    linkedinBtn.addEventListener('click', () => {
+      window.open('https://linkedin.com/in/yourprofile', '_blank');
+    });
+  });
+</script>
+
 </body>
 </html>
