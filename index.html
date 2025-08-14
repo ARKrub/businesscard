@@ -18,13 +18,15 @@
            background: var(--ui-bg); color: var(--ui-text); text-decoration:none; font-weight:600; cursor:pointer; }
     .btn:hover { border-color: rgba(255,255,255,.6); }
     #startBtn { position:fixed; inset:0; display:grid; place-items:center; z-index:20; background: rgba(0,0,0,.7); }
-    #startBtn > button { background:#3b82f6; border-color:#3b82f6; }
+    #startBtn > div { text-align:center; color:#fff; max-width: 92vw; }
+    #startBtn > div h2 { margin:.2rem 0 0.6rem; }
+    #startBtn > div p { opacity:.9; margin:.2rem 0 .8rem; }
 
     /* Contact bar (example links) */
     .bottombar { position: fixed; left:0; right:0; bottom: 10px; display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; z-index:15; }
 
     /* Debug panel */
-    #debugPanel { position: fixed; right: 10px; top: 10px; width: min(92vw, 360px); max-height: 55vh; overflow:auto; z-index: 25; color:#fff; background: var(--ui-bg);
+    #debugPanel { position: fixed; right: 10px; top: 10px; width: min(92vw, 380px); max-height: 60vh; overflow:auto; z-index: 25; color:#fff; background: var(--ui-bg);
                   border:1px solid rgba(255,255,255,.25); border-radius: 12px; padding:.6rem .8rem; font-size:.85rem; display:none; }
     #debugPanel pre { white-space: pre-wrap; word-break: break-word; margin: .4rem 0; }
     #debugToggle { position: fixed; right: 10px; bottom: 10px; z-index: 26; }
@@ -40,11 +42,12 @@
 
   <!-- Start gate (gets camera/media permission via gesture) -->
   <div id="startBtn">
-    <div style="text-align:center; color:#fff; max-width: 90vw;">
-      <h2 style="margin:.2rem 0 0.6rem;">Start AR Experience</h2>
-      <p style="opacity:.9; margin:.2rem 0 .8rem;">Tap Start, allow camera access, and point at your business card.</p>
+    <div>
+      <h2>Start AR Experience</h2>
+      <p>Tap Start, allow camera access, and point at your business card.</p>
       <div style="display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap;">
         <button class="btn" id="startAction">Start</button>
+        <button class="btn" id="resetAction" title="Stop and restart AR system">Reset AR</button>
         <button class="btn" id="debugToggle">Show Debug</button>
       </div>
     </div>
@@ -65,7 +68,7 @@
 
   <!-- AR Scene -->
   <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiScanning: false; uiLoading: true;"
     embedded
     color-space="sRGB"
     renderer="precision: mediump; antialias: true; alpha: false; colorManagement: true; physicallyCorrectLights: true"
@@ -73,7 +76,7 @@
     device-orientation-permission-ui="enabled: true"
     id="scene">
 
-    <a-assets timeout="20000">
+    <a-assets timeout="25000">
       <a-asset-item id="avatarGLB" src="./assets/avatar.glb" crossorigin="anonymous"></a-asset-item>
       <video id="propVideo" src="./assets/properties.mp4" preload="auto" loop playsinline webkit-playsinline muted crossorigin="anonymous"></video>
     </a-assets>
@@ -99,7 +102,7 @@
     };
     const stringify = (v)=>{ try { return typeof v === 'string' ? v : JSON.stringify(v, null, 2);} catch{ return String(v);} };
 
-    // Swallow unrelated extension errors (e.g., MetaMask) so they don't distract
+    // Ignore unrelated extension errors (e.g., MetaMask) so they don't distract the UX/tests
     window.addEventListener('error', (e)=>{
       if (String(e?.message||'').toLowerCase().includes('metamask')) { log('Ignoring extension error', e.message); e.preventDefault(); }
     });
@@ -114,7 +117,18 @@
       log('Test: HTTPS or localhost', { result: https, protocol: location.protocol, host: location.host });
       return https;
     }
+    async function testWebGL(){
+      let gl = null; try { const c = document.createElement('canvas'); gl = c.getContext('webgl') || c.getContext('experimental-webgl'); } catch {}
+      log('Test: WebGL available', { result: !!gl });
+      if (!gl) alert('WebGL is not available/enabled. Please enable hardware acceleration or try another browser.');
+      return !!gl;
+    }
     async function testPermissions(){
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        log('Test: getUserMedia ❌', 'navigator.mediaDevices.getUserMedia is not available');
+        alert('Camera API not available in this browser.');
+        return false;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
         // immediately stop preview tracks; MindAR will open its own stream
@@ -138,12 +152,23 @@
       if (!results.targets) alert('Missing targets.mind (AR image target). Place it at ./targets.mind');
       return results.targets && results.avatar && results.video;
     }
+    async function testAutoplayPolicy(){
+      const v = document.getElementById('propVideo');
+      try { await v.play(); log('Test: Video autoplay (muted) ✅'); v.pause(); } catch(e){ log('Test: Video autoplay (muted) ❌', e?.message||e); }
+      return true; // non-fatal
+    }
+    function testExtensionPresence(){
+      const hasWallet = !!window.ethereum; // MetaMask / wallets inject this
+      log('Test: Wallet extension detected', { ethereum: hasWallet });
+      return true; // informational
+    }
 
-    // ===== Startup Sequence =====
+    // ===== Startup / Control =====
     const sceneEl = $('#scene');
     const anchor = $('#anchor');
     const startGate = $('#startBtn');
     const startAction = $('#startAction');
+    const resetAction = $('#resetAction');
     const debugPanel = $('#debugPanel');
     const debugToggle = $('#debugToggle');
 
@@ -152,7 +177,6 @@
       debugToggle.textContent = debugPanel.style.display === 'block' ? 'Hide Debug' : 'Show Debug';
     });
 
-    // MindAR lifecycle logging
     sceneEl.addEventListener('loaded', ()=> log('A-Frame scene loaded'));
     sceneEl.addEventListener('arReady', ()=> log('MindAR arReady ✅'));
     sceneEl.addEventListener('arError', (e)=> log('MindAR arError ❌', e?.detail || e));
@@ -160,7 +184,6 @@
     anchor.addEventListener('targetLost', ()=> log('Target Lost'));
 
     async function startMindAR(){
-      // Ensure the system is available (scene may not be fully initialized yet)
       if (!sceneEl.systems || !sceneEl.systems['mindar-image-system']) {
         await new Promise(res => sceneEl.addEventListener('loaded', res, { once: true }));
       }
@@ -172,18 +195,26 @@
         alert('Failed to start AR. Check camera permissions and that targets.mind exists.');
       }
     }
+    async function stopMindAR(){
+      try {
+        if (sceneEl.systems && sceneEl.systems['mindar-image-system']) {
+          await sceneEl.systems['mindar-image-system'].stop();
+          log('MindAR stopped ⏹️');
+        }
+      } catch (e) { log('Failed to stop MindAR', { name: e.name, message: e.message }); }
+    }
 
     async function boot(){
-      const okHTTPS = await testHTTPS();
-      if (!okHTTPS) { alert('This page must be served over HTTPS (or localhost) to access the camera.'); return; }
-      const okPerm = await testPermissions();
-      if (!okPerm) return;
-      const okAssets = await testAssets();
-      if (!okAssets) log('Continuing anyway, but AR may not work without required assets.');
+      const okHTTPS = await testHTTPS(); if (!okHTTPS) { alert('This page must be served over HTTPS (or localhost) to access the camera.'); return; }
+      const okWebGL = await testWebGL(); if (!okWebGL) return;
+      const okPerm = await testPermissions(); if (!okPerm) return;
+      await testAssets();
+      testExtensionPresence();
+      await testAutoplayPolicy();
       await startMindAR();
-      // Prime/auto-play the property video muted (required for iOS)
+      // Prime property video muted (iOS-friendly)
       const v = document.getElementById('propVideo');
-      try { await v.play(); } catch {} // ignore if user gesture still required
+      try { await v.play(); } catch {}
     }
 
     startAction.addEventListener('click', async () => {
@@ -191,11 +222,15 @@
       await boot();
     });
 
-    // Also allow starting by tapping anywhere once (mobile convenience)
+    resetAction.addEventListener('click', async () => {
+      await stopMindAR();
+      startGate.style.display = 'grid';
+      log('AR reset. Tap Start to begin again.');
+    });
+
+    // Convenience: start after first tap anywhere
     window.addEventListener('touchend', function autoStartOnce(){
-      if (startGate.style.display !== 'none') {
-        startAction.click();
-      }
+      if (startGate.style.display !== 'none') { startAction.click(); }
       window.removeEventListener('touchend', autoStartOnce);
     }, { passive:true });
   </script>
@@ -209,10 +244,18 @@
   2) Edit the contact links above.
   3) Host over HTTPS (GitHub Pages, Netlify, Vercel). Camera won’t work on plain http.
 
+  TEST CASES (built-in preflight):
+  - Test: HTTPS or localhost (must be true for camera)
+  - Test: WebGL available (GPU rendering)
+  - Test: getUserMedia (camera permission)
+  - Test: assets existence (targets.mind, avatar.glb, properties.mp4)
+  - Test: Video autoplay (muted)
+  - Test: Wallet extension detected (informational)
+
   NOTES
-  - If you see a browser/extension message like "Failed to connect to MetaMask", it’s unrelated. Disable browser extensions (esp. crypto/wallet) and reload.
-  - We’ve hidden MindAR’s blue scanning overlay so the live camera feed is fully visible.
-  - Use the Debug panel to view environment tests and AR lifecycle events.
+  - If you see a message like "Failed to connect to MetaMask", it’s from a browser extension and unrelated to this app. Disable MetaMask (and other wallet/crypto extensions) for this page.
+  - MindAR's blue scanning overlay is disabled; you should see the live camera feed.
+  - Use the Debug panel to view test results and AR lifecycle events.
   -->
 </body>
 </html>
