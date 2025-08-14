@@ -14,13 +14,14 @@
 <body>
   <button id="startBtn">Start AR</button>
 
-  <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false" id="scene">
+  <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" id="scene">
     <a-assets>
       <a-asset-item id="avatarGLB" src="./assets/avatar.glb"></a-asset-item>
       <video id="propVideo" src="./assets/properties.mp4" autoplay loop muted playsinline crossorigin="anonymous"></video>
     </a-assets>
 
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    <!-- AR Camera with permission UI enabled -->
+    <a-camera position="0 0 0" look-controls="enabled: false" device-orientation-permission-ui="enabled: true"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
       <a-entity gltf-model="#avatarGLB" position="0 0 0" scale="0.3 0.3 0.3" rotation="0 180 0" animation-mixer></a-entity>
@@ -31,9 +32,24 @@
   <script>
     const startBtn = document.getElementById('startBtn');
     const sceneEl = document.getElementById('scene');
+
+    // Request camera permissions explicitly before starting MindAR
+    async function requestCameraAccess() {
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        return true;
+      } catch (err) {
+        alert('Camera access is required to start AR.');
+        return false;
+      }
+    }
+
     startBtn.addEventListener('click', async () => {
-      startBtn.style.display = 'none';
-      await sceneEl.systems['mindar-image-system'].start();
+      const granted = await requestCameraAccess();
+      if (granted) {
+        startBtn.style.display = 'none';
+        await sceneEl.systems['mindar-image-system'].start();
+      }
     });
   </script>
 </body>
