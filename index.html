@@ -12,7 +12,7 @@
 
   <!-- Custom Business Card Marker -->
   <a-marker type="pattern" url="img/business-card.patt">
-
+    
     <!-- 3D Avatar -->
     <a-entity id="avatar" gltf-model="model/avatar.glb"
               scale="0.5 0.5 0.5"
@@ -46,24 +46,25 @@
 </a-scene>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const websiteBtn = document.querySelector('#btn-website');
-    const linkedinBtn = document.querySelector('#btn-linkedin');
+document.addEventListener('DOMContentLoaded', () => {
+  const websiteBtn = document.querySelector('#btn-website');
+  const linkedinBtn = document.querySelector('#btn-linkedin');
 
-    websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
-    linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
+  // Button click events
+  websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
+  linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
 
-    // Rotate buttons
-    const rotateButton = (el) => {
-      let angle = 0;
-      setInterval(() => {
-        angle += 1;
-        el.setAttribute('rotation', `0 ${180 + angle} 0`);
-      }, 50);
-    };
-    rotateButton(websiteBtn);
-    rotateButton(linkedinBtn);
-  });
+  // Rotate buttons slowly
+  const rotateButton = (el) => {
+    let angle = 0;
+    setInterval(() => {
+      angle += 1;
+      el.setAttribute('rotation', `0 ${180 + angle} 0`);
+    }, 50);
+  };
+  rotateButton(websiteBtn);
+  rotateButton(linkedinBtn);
+});
 </script>
 
 </body>
