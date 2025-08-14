@@ -35,15 +35,16 @@ document.querySelector('#startButton').addEventListener('click', () => {
       vr-mode-ui="enabled: false"
       renderer="antialias: true; alpha: true"
       arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix;">
-
+      
       <!-- Business Card Marker -->
-      <a-marker type="pattern" url="img/business-card.patt">
+      <a-marker type="pattern" url="img/business-card.patt" id="businessMarker">
         <!-- Avatar -->
-        <a-entity gltf-model="model/avatar.glb"
+        <a-entity id="avatar" gltf-model="model/avatar.glb"
                   scale="0.4 0.4 0.4"
                   position="0 0 0"
                   rotation="0 180 0"
-                  animation="property: rotation; to: 0 190 0; dir: alternate; dur: 2000; loop: true">
+                  animation="property: rotation; to: 0 190 0; dir: alternate; dur: 2000; loop: true"
+                  visible="false">
         </a-entity>
 
         <!-- Website Button -->
@@ -51,7 +52,8 @@ document.querySelector('#startButton').addEventListener('click', () => {
                   scale="0.15 0.15 0.15"
                   position="-0.4 0 0"
                   rotation="0 180 0"
-                  class="clickable hover-glow">
+                  class="clickable hover-glow"
+                  visible="false">
           <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
                        to="-0.4 0.1 0"></a-animation>
         </a-entity>
@@ -61,7 +63,8 @@ document.querySelector('#startButton').addEventListener('click', () => {
                   scale="0.15 0.15 0.15"
                   position="0.4 0 0"
                   rotation="0 180 0"
-                  class="clickable hover-glow">
+                  class="clickable hover-glow"
+                  visible="false">
           <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
                        to="0.4 0.1 0"></a-animation>
         </a-entity>
@@ -76,11 +79,41 @@ document.querySelector('#startButton').addEventListener('click', () => {
     </a-scene>
   `;
 
-  // Add click events and rotate buttons
+  // Wait for the scene to load
   setTimeout(() => {
+    const scene = document.querySelector('a-scene');
+    const avatar = document.querySelector('#avatar');
     const websiteBtn = document.querySelector('#btn-website');
     const linkedinBtn = document.querySelector('#btn-linkedin');
+    const marker = document.querySelector('#businessMarker');
 
+    // Show avatar & buttons when marker is detected
+    marker.addEventListener('markerFound', () => {
+      avatar.setAttribute('visible', 'true');
+      websiteBtn.setAttribute('visible', 'true');
+      linkedinBtn.setAttribute('visible', 'true');
+
+      // Optionally hide debug UI after detection
+      scene.components['arjs'].arToolkitContext.arController.debugUIRoot && 
+      (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'none');
+    });
+
+    // Hide avatar & buttons when marker is lost
+    marker.addEventListener('markerLost', () => {
+      avatar.setAttribute('visible', 'false');
+      websiteBtn.setAttribute('visible', 'false');
+      linkedinBtn.setAttribute('visible', 'false');
+
+      // Show debug UI again
+      scene.components['arjs'].arToolkitContext.arController.debugUIRoot &&
+      (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'block');
+    });
+
+    // Button click events
+    websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
+    linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
+
+    // Rotate buttons continuously
     const rotateButton = (el) => {
       let angle = 0;
       setInterval(() => {
@@ -88,15 +121,9 @@ document.querySelector('#startButton').addEventListener('click', () => {
         el.setAttribute('rotation', `0 ${180 + angle} 0`);
       }, 50);
     };
+    rotateButton(websiteBtn);
+    rotateButton(linkedinBtn);
 
-    if(websiteBtn){
-      websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
-      rotateButton(websiteBtn);
-    }
-    if(linkedinBtn){
-      linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
-      rotateButton(linkedinBtn);
-    }
   }, 1000);
 
 });
