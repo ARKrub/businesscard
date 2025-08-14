@@ -2,228 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AR Real Estate Business Card</title>
-  <!-- A-Frame & MindAR (Image Tracking) -->
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.4/dist/mindar-image-aframe.prod.js"></script>
-
   <style>
-    /* Page reset */
-    html, body { margin: 0; padding: 0; height: 100%; background:#000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-
-    /* Overlay UI */
-    .ui-wrap {
-      position: fixed; inset: 0; pointer-events: none; display: grid; grid-template-rows: auto 1fr auto; color: #fff;
-    }
-    .topbar {
-      display:flex; align-items:center; justify-content:center; gap:.5rem; padding:.6rem .8rem; backdrop-filter: blur(6px);
-      background: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,0));
-      pointer-events: none;
-    }
-    .badge { font-weight: 600; font-size: .95rem; letter-spacing:.2px; }
-
-    .bottombar { display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; padding: .8rem; pointer-events: auto; }
-    .btn {
-      display:inline-flex; align-items:center; gap:.5rem; padding:.7rem .9rem; border-radius: 999px; border:1px solid rgba(255,255,255,.25);
-      background: rgba(0,0,0,.45); text-decoration:none; color:#fff; font-weight:600; transition: all .2s ease; backdrop-filter: blur(6px);
-    }
-    .btn:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.6); }
-    .btn svg { width: 18px; height: 18px; }
-
-    /* Center prompt (tap to start video on iOS) */
-    .center-prompt { position: fixed; inset:0; display:grid; place-items:center; background: rgba(0,0,0,.55); color:#fff; z-index: 5; pointer-events: auto; }
-    .prompt-card { text-align:center; padding: 16px 18px; background: rgba(20,20,20,.8); border:1px solid rgba(255,255,255,.15); border-radius: 16px; max-width: 90vw; }
-    .prompt-card h3 { margin:0 0 .4rem; font-size: 1.05rem; }
-    .prompt-card p { margin:.1rem 0 .8rem; opacity:.9; font-size:.9rem; }
-    .prompt-actions { display:flex; gap:.6rem; justify-content:center; }
-    .btn-primary { background:#3b82f6; border-color:#3b82f6; }
-
-    /* Small helper chip shown when target lost */
-    .chip { position: fixed; left: 50%; transform: translateX(-50%); bottom: 96px; background: rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.2);
-      padding:.45rem .7rem; border-radius:999px; font-size:.85rem; pointer-events:none; display:none; }
-
-    /* Hide MindAR default UI if any (optional) */
-    .mindar-ui-loading { display:none !important; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #000; }
+    #startBtn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; padding: 1em 2em; background: #3b82f6; color: #fff; border: none; border-radius: 8px; font-size: 1.2em; cursor: pointer; }
   </style>
 </head>
 <body>
-  <!-- Overlay UI (HTML) -->
-  <div class="ui-wrap" aria-hidden="false">
-    <div class="topbar">
-      <span class="badge">🏠 Scan your business card to view AR</span>
-    </div>
+  <button id="startBtn">Start AR</button>
 
-    <div></div>
-
-    <div class="bottombar" id="contactBar">
-      <!-- Buttons are clickable even when AR is running -->
-      <a class="btn" href="https://your-website.example" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 10-7.07-7.07l-1.72 1.71" stroke-width="2"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 107.07 7.07l1.72-1.71" stroke-width="2"/></svg>
-        Website
-      </a>
-      <a class="btn" href="https://instagram.com/yourhandle" target="_blank" rel="noopener">📸 Instagram</a>
-      <a class="btn" href="https://facebook.com/yourhandle" target="_blank" rel="noopener">📘 Facebook</a>
-      <a class="btn" href="https://www.tiktok.com/@yourhandle" target="_blank" rel="noopener">🎵 TikTok</a>
-      <a class="btn" href="tel:+66123456789">📞 Call</a>
-      <a class="btn" href="mailto:hello@yourdomain.com?subject=Property%20Inquiry">✉️ Email</a>
-      <a class="btn" id="toggle-audio" href="#">🔊 Audio: Off</a>
-      <a class="btn" id="toggle-video" href="#">🎬 Video: Play</a>
-    </div>
-  </div>
-
-  <div id="lostChip" class="chip">Move the card into view</div>
-
-  <!-- iOS/Android gesture gate for video w/ sound -->
-  <div class="center-prompt" id="gate">
-    <div class="prompt-card">
-      <h3>Start AR Experience</h3>
-      <p>Allow camera access. Then tap Start to enable media playback.</p>
-      <div class="prompt-actions">
-        <button class="btn btn-primary" id="startBtn">Start</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- AR Scene -->
-  <!-- Replace ./targets.mind with your trained MindAR image target (the business card artwork) -->
-  <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; filterMinCF: 0.0001; filterBeta: 0.01;"
-    embedded
-    color-space="sRGB"
-    renderer="precision: mediump; antialias: true;"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false"
-    id="scene">
-
-    <a-assets timeout="18000">
-      <!-- 3D Avatar GLB (mixamo/readyplayerme etc.) -->
+  <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false" id="scene">
+    <a-assets>
       <a-asset-item id="avatarGLB" src="./assets/avatar.glb"></a-asset-item>
-
-      <!-- Promotional video of high-profile properties -->
-      <video id="propVideo" src="./assets/properties.mp4" preload="auto" loop playsinline webkit-playsinline crossorigin="anonymous"></video>
-
-      <!-- Optional card art to use as a translucent frame -->
-      <img id="frame" src="./assets/frame.png" crossorigin="anonymous"/>
+      <video id="propVideo" src="./assets/properties.mp4" autoplay loop muted playsinline crossorigin="anonymous"></video>
     </a-assets>
 
-    <!-- AR Camera -->
-    <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- When the business card (targetIndex 0) is detected, place content on it -->
-    <a-entity id="anchor" mindar-image-target="targetIndex: 0">
-      <!-- Shadow receiver plane (subtle) -->
-      <a-plane rotation="-90 0 0" width="1" height="0.6" position="0 0 0" material="color: #000; opacity: 0.15; transparent: true"></a-plane>
-
-      <!-- 3D Avatar -->
-      <a-entity id="avatar" gltf-model="#avatarGLB" position="0 0.05 0" rotation="0 180 0" scale="0.25 0.25 0.25" animation-mixer>
-      </a-entity>
-
-      <!-- Property Video (16:9) as an AR screen above the card -->
-      <a-video id="videoPlane" src="#propVideo" width="0.95" height="0.535" position="0 0.55 0" rotation="-10 0 0" material="shader: flat; transparent: false"></a-video>
-
-      <!-- Optional frame overlay -->
-      <a-plane src="#frame" position="0 0.55 0.001" width="1.02" height="0.58" rotation="-10 0 0" material="transparent: true"></a-plane>
-
-      <!-- Floating title plate on card -->
-      <a-entity position="0 0.22 0.02" rotation="-90 0 0">
-        <a-plane width="0.9" height="0.16" material="color:#111; opacity:.7; transparent:true"></a-plane>
-        <a-entity text="value: Your Name — Luxury Real Estate; color: #FFF; align: center; width: 1.4"></a-entity>
-      </a-entity>
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity gltf-model="#avatarGLB" position="0 0 0" scale="0.3 0.3 0.3" rotation="0 180 0" animation-mixer></a-entity>
+      <a-video src="#propVideo" width="1" height="0.56" position="0 0.5 0" rotation="-10 0 0"></a-video>
     </a-entity>
   </a-scene>
 
   <script>
-    // DOM elements
-    const gate = document.getElementById('gate');
     const startBtn = document.getElementById('startBtn');
-    const propVideo = document.getElementById('propVideo');
-    const toggleVideoBtn = document.getElementById('toggle-video');
-    const toggleAudioBtn = document.getElementById('toggle-audio');
-    const lostChip = document.getElementById('lostChip');
     const sceneEl = document.getElementById('scene');
-
-    // Keep video muted by default; allow enabling later
-    propVideo.muted = true;
-
-    // iOS requires a user gesture before playing media with audio
     startBtn.addEventListener('click', async () => {
-      gate.style.display = 'none';
-      try {
-        await sceneEl.systems['mindar-image-system'].start();
-      } catch(e) {
-        // If MindAR not yet initialized, wait for scene load event
-        sceneEl.addEventListener('loaded', async () => {
-          try { await sceneEl.systems['mindar-image-system'].start(); } catch(err) { console.warn(err); }
-        }, { once: true });
-      }
-      // Prime the video element via gesture so later play() works
-      try { await propVideo.play(); } catch(e) { /* ignored, user can press play */ }
+      startBtn.style.display = 'none';
+      await sceneEl.systems['mindar-image-system'].start();
     });
-
-    // Buttons: Video Play/Pause
-    toggleVideoBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      if (propVideo.paused) {
-        try { await propVideo.play(); } catch(err) { console.warn('Video play failed', err); }
-        toggleVideoBtn.textContent = '🎬 Video: Pause';
-      } else {
-        propVideo.pause();
-        toggleVideoBtn.textContent = '🎬 Video: Play';
-      }
-    });
-
-    // Buttons: Audio On/Off
-    toggleAudioBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      propVideo.muted = !propVideo.muted;
-      toggleAudioBtn.textContent = propVideo.muted ? '🔊 Audio: Off' : '🔊 Audio: On';
-      // If unmuted and paused, try play so user hears audio
-      if (!propVideo.muted && propVideo.paused) { propVideo.play().catch(()=>{}); }
-    });
-
-    // Show a small hint when the target is lost
-    const anchor = document.getElementById('anchor');
-    anchor.addEventListener('targetFound', () => {
-      lostChip.style.display = 'none';
-      // Autoplay (muted) when target is found for a smoother UX
-      propVideo.play().catch(()=>{});
-    });
-    anchor.addEventListener('targetLost', () => {
-      lostChip.style.display = 'block';
-    });
-
-    // Optional: Start AR automatically after the first user touch anywhere
-    // to reduce friction if they tap outside the Start button
-    window.addEventListener('touchend', async function autoStartOnce() {
-      if (gate.style.display !== 'none') {
-        startBtn.click();
-      }
-      window.removeEventListener('touchend', autoStartOnce);
-    }, { passive: true });
   </script>
-
-  <!--
-  📦 How to deploy & customize
-  1) Train a MindAR target from your business card artwork to get `targets.mind`.
-     Use: https://hiukim.github.io/mind-ar-js-doc/tools/compile/ (drop your card image).
-  2) Put your files:
-       - ./targets.mind                  (tracker data)
-       - ./assets/avatar.glb             (3D avatar)
-       - ./assets/properties.mp4         (property highlight reel)
-       - ./assets/frame.png              (optional frame)
-  3) Edit the contact links in the HTML buttons above.
-  4) Host on any static host (GitHub Pages, Vercel, Netlify). Must be served over HTTPS for camera.
-
-  🔧 Tips
-  - Keep avatar under ~8–12 MB. Prefer Draco/meshopt compressed .glb.
-  - Re-encode video to 1080p H.264 MP4 (yuv420p), bitrate ~4–6 Mbps, with AAC audio. Provide a .webm fallback if desired.
-  - If iOS shows no video, ensure the <video> element has playsinline and is started from a user gesture (handled by Start button).
-  - Tune the rotation/scale/position to fit your card’s layout.
-
-  🧪 Local testing
-  - Use a local HTTPS dev server (e.g., `npx http-server -S -C cert.pem -K key.pem`).
-  - Or upload to a host that provides HTTPS.
-  -->
 </body>
 </html>
