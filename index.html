@@ -22,9 +22,13 @@
 
 <a-scene embedded vr-mode-ui="enabled: false"
          renderer="antialias: true; alpha: true"
-         arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true; detectionMode: mono;">
+         arjs="trackingMethod: best; sourceType: webcam;
+               sourceWidth:1280; sourceHeight:720;
+               displayWidth: window.innerWidth; displayHeight: window.innerHeight;
+               facingMode: environment; debugUIEnabled: false;
+               detectionMode: mono_and_matrix; maxDetectionRate: 60; matrixCodeType: 3x3;">
 
-  <!-- Business Card Marker -->
+  <!-- Marker -->
   <a-marker type="pattern" url="img/business-card.patt" id="businessMarker">
 
     <!-- Avatar -->
@@ -52,7 +56,6 @@
 
   </a-marker>
 
-  <!-- Camera -->
   <a-entity camera position="0 0 0"></a-entity>
 
 </a-scene>
@@ -66,8 +69,8 @@ const marker = document.querySelector('#businessMarker');
 const scene = document.querySelector('a-scene');
 
 startBtn.addEventListener('click', () => {
-  // This user gesture triggers camera permission
   startBtn.style.display = 'none';
+  // User gesture triggers mobile camera permission
 });
 
 // Show avatar/buttons when marker detected
@@ -75,10 +78,6 @@ marker.addEventListener('markerFound', () => {
   avatar.setAttribute('visible', 'true');
   websiteBtn.setAttribute('visible', 'true');
   linkedinBtn.setAttribute('visible', 'true');
-
-  // Hide debug scanning UI after detection
-  scene.components['arjs'].arToolkitContext.arController.debugUIRoot &&
-    (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'none');
 });
 
 // Hide avatar/buttons if marker lost
@@ -86,13 +85,9 @@ marker.addEventListener('markerLost', () => {
   avatar.setAttribute('visible', 'false');
   websiteBtn.setAttribute('visible', 'false');
   linkedinBtn.setAttribute('visible', 'false');
-
-  // Show debug scanning UI again
-  scene.components['arjs'].arToolkitContext.arController.debugUIRoot &&
-    (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'block');
 });
 
-// Button click events
+// Click events
 websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
 linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
 
