@@ -7,126 +7,107 @@
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
 <style>
-  body { margin:0; overflow:hidden; background:#111; color:white; text-align:center; }
+  body { margin:0; overflow:hidden; background:#111; color:white; }
   #startButton {
-    font-size: 22px; padding:15px 30px; margin-top: 30%; cursor:pointer;
-    border:none; border-radius:8px; background: #0af; color:white;
+    position:absolute; top:40%; left:50%; transform:translateX(-50%);
+    font-size:22px; padding:15px 30px; border:none; border-radius:8px;
+    background:#0af; color:white; cursor:pointer; z-index:1000;
   }
   .hover-glow:hover { opacity:0.8; transform:scale(1.2); transition: all 0.3s ease; }
 </style>
 </head>
 <body>
 
-<h2>Click to Start AR</h2>
 <button id="startButton">Start AR</button>
-<div id="arContainer" style="width:100%; height:100%; display:none;"></div>
+
+<a-scene embedded
+         vr-mode-ui="enabled: false"
+         renderer="antialias: true; alpha: true"
+         arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix;">
+
+  <!-- Business Card Marker -->
+  <a-marker type="pattern" url="img/business-card.patt" id="businessMarker">
+    <!-- Avatar -->
+    <a-entity id="avatar" gltf-model="model/avatar.glb"
+              scale="0.4 0.4 0.4" position="0 0 0" rotation="0 180 0"
+              animation="property: rotation; to: 0 190 0; dir: alternate; dur: 2000; loop: true"
+              visible="false">
+    </a-entity>
+
+    <!-- Website Button -->
+    <a-entity id="btn-website" gltf-model="model/button_website.glb"
+              scale="0.15 0.15 0.15" position="-0.4 0 0" rotation="0 180 0"
+              class="clickable hover-glow" visible="false">
+      <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
+                   to="-0.4 0.1 0"></a-animation>
+    </a-entity>
+
+    <!-- LinkedIn Button -->
+    <a-entity id="btn-linkedin" gltf-model="model/button_linkedin.glb"
+              scale="0.15 0.15 0.15" position="0.4 0 0" rotation="0 180 0"
+              class="clickable hover-glow" visible="false">
+      <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
+                   to="0.4 0.1 0"></a-animation>
+    </a-entity>
+  </a-marker>
+
+  <!-- Fallback Hiro Marker -->
+  <a-marker preset="hiro">
+    <a-box position="0 0.5 0" color="blue" scale="0.5 0.5 0.5"></a-box>
+  </a-marker>
+
+  <a-entity camera></a-entity>
+</a-scene>
 
 <script>
-document.querySelector('#startButton').addEventListener('click', () => {
-  const btn = document.querySelector('#startButton');
-  btn.style.display = 'none';
+const startBtn = document.querySelector('#startButton');
+const avatar = document.querySelector('#avatar');
+const websiteBtn = document.querySelector('#btn-website');
+const linkedinBtn = document.querySelector('#btn-linkedin');
+const marker = document.querySelector('#businessMarker');
 
-  const container = document.querySelector('#arContainer');
-  container.style.display = 'block';
-
-  container.innerHTML = `
-    <a-scene
-      embedded
-      vr-mode-ui="enabled: false"
-      renderer="antialias: true; alpha: true"
-      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix;">
-      
-      <!-- Business Card Marker -->
-      <a-marker type="pattern" url="img/business-card.patt" id="businessMarker">
-        <!-- Avatar -->
-        <a-entity id="avatar" gltf-model="model/avatar.glb"
-                  scale="0.4 0.4 0.4"
-                  position="0 0 0"
-                  rotation="0 180 0"
-                  animation="property: rotation; to: 0 190 0; dir: alternate; dur: 2000; loop: true"
-                  visible="false">
-        </a-entity>
-
-        <!-- Website Button -->
-        <a-entity id="btn-website" gltf-model="model/button_website.glb"
-                  scale="0.15 0.15 0.15"
-                  position="-0.4 0 0"
-                  rotation="0 180 0"
-                  class="clickable hover-glow"
-                  visible="false">
-          <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
-                       to="-0.4 0.1 0"></a-animation>
-        </a-entity>
-
-        <!-- LinkedIn Button -->
-        <a-entity id="btn-linkedin" gltf-model="model/button_linkedin.glb"
-                  scale="0.15 0.15 0.15"
-                  position="0.4 0 0"
-                  rotation="0 180 0"
-                  class="clickable hover-glow"
-                  visible="false">
-          <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
-                       to="0.4 0.1 0"></a-animation>
-        </a-entity>
-      </a-marker>
-
-      <!-- Fallback Hiro Marker -->
-      <a-marker preset="hiro">
-        <a-box position="0 0.5 0" color="blue" scale="0.5 0.5 0.5"></a-box>
-      </a-marker>
-
-      <a-entity camera></a-entity>
-    </a-scene>
-  `;
-
-  // Wait for the scene to load
-  setTimeout(() => {
-    const scene = document.querySelector('a-scene');
-    const avatar = document.querySelector('#avatar');
-    const websiteBtn = document.querySelector('#btn-website');
-    const linkedinBtn = document.querySelector('#btn-linkedin');
-    const marker = document.querySelector('#businessMarker');
-
-    // Show avatar & buttons when marker is detected
-    marker.addEventListener('markerFound', () => {
-      avatar.setAttribute('visible', 'true');
-      websiteBtn.setAttribute('visible', 'true');
-      linkedinBtn.setAttribute('visible', 'true');
-
-      // Optionally hide debug UI after detection
-      scene.components['arjs'].arToolkitContext.arController.debugUIRoot && 
-      (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'none');
-    });
-
-    // Hide avatar & buttons when marker is lost
-    marker.addEventListener('markerLost', () => {
-      avatar.setAttribute('visible', 'false');
-      websiteBtn.setAttribute('visible', 'false');
-      linkedinBtn.setAttribute('visible', 'false');
-
-      // Show debug UI again
-      scene.components['arjs'].arToolkitContext.arController.debugUIRoot &&
-      (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'block');
-    });
-
-    // Button click events
-    websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
-    linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
-
-    // Rotate buttons continuously
-    const rotateButton = (el) => {
-      let angle = 0;
-      setInterval(() => {
-        angle += 1;
-        el.setAttribute('rotation', `0 ${180 + angle} 0`);
-      }, 50);
-    };
-    rotateButton(websiteBtn);
-    rotateButton(linkedinBtn);
-
-  }, 1000);
-
+startBtn.addEventListener('click', () => {
+  // Hide overlay button
+  startBtn.style.display = 'none';
 });
+
+// Show avatar/buttons when marker detected
+marker.addEventListener('markerFound', () => {
+  avatar.setAttribute('visible', 'true');
+  websiteBtn.setAttribute('visible', 'true');
+  linkedinBtn.setAttribute('visible', 'true');
+
+  // Hide debug scanning UI after detection
+  const scene = document.querySelector('a-scene');
+  scene.components['arjs'].arToolkitContext.arController.debugUIRoot &&
+    (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'none');
+});
+
+// Hide avatar/buttons when marker lost
+marker.addEventListener('markerLost', () => {
+  avatar.setAttribute('visible', 'false');
+  websiteBtn.setAttribute('visible', 'false');
+  linkedinBtn.setAttribute('visible', 'false');
+
+  const scene = document.querySelector('a-scene');
+  scene.components['arjs'].arToolkitContext.arController.debugUIRoot &&
+    (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'block');
+});
+
+// Button click actions
+websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
+linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
+
+// Rotate buttons
+const rotateButton = (el) => {
+  let angle = 0;
+  setInterval(() => {
+    angle += 1;
+    el.setAttribute('rotation', `0 ${180 + angle} 0`);
+  }, 50);
+};
+rotateButton(websiteBtn);
+rotateButton(linkedinBtn);
 </script>
 </body>
 </html>
