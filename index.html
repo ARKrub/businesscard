@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AR Business Card</title>
+<title>AR Test</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
@@ -19,41 +19,32 @@
 
 <button id="startButton">Start AR</button>
 
-<a-scene embedded
-         vr-mode-ui="enabled: false"
+<!-- Scene must be visible from page load -->
+<a-scene embedded vr-mode-ui="enabled: false"
          renderer="antialias: true; alpha: true"
          arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix;">
-
-  <a-marker type="pattern" url="img/business-card.patt" id="businessMarker">
-    <a-box id="avatar" position="0 0.5 0" scale="0.5 0.5 0.5" color="red" visible="false"></a-box>
+  <a-marker type="pattern" url="img/business-card.patt" id="marker">
+    <a-box id="avatar" position="0 0.5 0" color="red" visible="false"></a-box>
   </a-marker>
-
   <a-entity camera></a-entity>
 </a-scene>
 
 <script>
 const startBtn = document.querySelector('#startButton');
 const avatar = document.querySelector('#avatar');
-const marker = document.querySelector('#businessMarker');
+const marker = document.querySelector('#marker');
 
 startBtn.addEventListener('click', () => {
-  // Hide overlay
+  // User gesture triggers mobile camera access
   startBtn.style.display = 'none';
 });
 
 marker.addEventListener('markerFound', () => {
   avatar.setAttribute('visible', 'true');
-  // Optionally hide debug UI
-  const scene = document.querySelector('a-scene');
-  scene.components['arjs'].arToolkitContext.arController.debugUIRoot &&
-    (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'none');
 });
 
 marker.addEventListener('markerLost', () => {
   avatar.setAttribute('visible', 'false');
-  const scene = document.querySelector('a-scene');
-  scene.components['arjs'].arToolkitContext.arController.debugUIRoot &&
-    (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'block');
 });
 </script>
 </body>
