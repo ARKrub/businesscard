@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AR Business Card Demo</title>
+  <title>AR Business Card</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
 </head>
@@ -46,6 +46,25 @@
 </a-scene>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const websiteBtn = document.querySelector('#btn-website');
-  const linkedinBtn = document.querySelector(
+  document.addEventListener('DOMContentLoaded', () => {
+    const websiteBtn = document.querySelector('#btn-website');
+    const linkedinBtn = document.querySelector('#btn-linkedin');
+
+    websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
+    linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
+
+    // Rotate buttons
+    const rotateButton = (el) => {
+      let angle = 0;
+      setInterval(() => {
+        angle += 1;
+        el.setAttribute('rotation', `0 ${180 + angle} 0`);
+      }, 50);
+    };
+    rotateButton(websiteBtn);
+    rotateButton(linkedinBtn);
+  });
+</script>
+
+</body>
+</html>
