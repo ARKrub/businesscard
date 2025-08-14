@@ -5,12 +5,31 @@
   <title>AR Business Card</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #start-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      padding: 20px 40px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+  </style>
 </head>
-<body style="margin:0; overflow:hidden;">
+<body>
 
-<a-scene embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
-  
-  <!-- Business Card Marker -->
+<!-- Button to request camera -->
+<button id="start-button">Start AR</button>
+
+<a-scene id="ar-scene" embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;" style="display:none;">
+
+  <!-- Marker -->
   <a-marker type="pattern" url="img/business-card.patt">
 
     <!-- 3D Avatar -->
@@ -42,12 +61,27 @@
 </a-scene>
 
 <script>
-  // Wait until the scene is loaded
-  document.addEventListener('DOMContentLoaded', () => {
+  const startBtn = document.getElementById('start-button');
+  const arScene = document.getElementById('ar-scene');
+
+  startBtn.addEventListener('click', async () => {
+    // Request camera access
+    try {
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      // Hide button and show AR scene
+      startBtn.style.display = 'none';
+      arScene.style.display = 'block';
+      setupButtons();
+    } catch (err) {
+      alert('Camera access denied. AR cannot start.');
+      console.error(err);
+    }
+  });
+
+  function setupButtons() {
     const websiteBtn = document.querySelector('#btn-website');
     const linkedinBtn = document.querySelector('#btn-linkedin');
 
-    // Add click events
     websiteBtn.addEventListener('click', () => {
       window.open('https://yourwebsite.com', '_blank');
     });
@@ -56,7 +90,7 @@
       window.open('https://linkedin.com/in/yourprofile', '_blank');
     });
 
-    // Optional: make buttons rotate slowly
+    // Rotate buttons
     const rotateButton = (el) => {
       let angle = 0;
       setInterval(() => {
@@ -64,10 +98,9 @@
         el.setAttribute('rotation', `0 ${180 + angle} 0`);
       }, 50);
     };
-
     rotateButton(websiteBtn);
     rotateButton(linkedinBtn);
-  });
+  }
 </script>
 
 </body>
