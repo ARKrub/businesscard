@@ -4,77 +4,139 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>AR Real Estate Business Card — Debug-Safe Build</title>
-  <!-- Core libs -->
+  <title>AR Real Estate Business Card — MetaMask Noise Hardened</title>
+
+  <!--
+    EARLY NOISE SUPPRESSION
+    Install global handlers and console wrappers *before* any libraries load so extension errors
+    (MetaMask / ethereum / walletconnect) are captured and suppressed from confusing the user.
+  -->
+  <script>
+    (function(){
+      // Buffer for suppressed logs so the debug panel can show them later.
+      window.__suppressedLogs = window.__suppressedLogs || [];
+
+      // Words to filter (case-insensitive)
+      const FILTER = ['metamask','meta-mask','meta mask','ethereum','walletconnect','wallet connect','web3','failed to connect','failed to connect to metamask','connect to metamask'];
+      function containsFilter(s){
+        if (!s) return false;
+        try { s = String(s).toLowerCase(); } catch(e) { return false; }
+        return FILTER.some(f => s.includes(f));
+      }
+
+      // Save originals
+      const _origConsoleError = console.error.bind(console);
+      const _origConsoleWarn = console.warn.bind(console);
+      const _origConsoleLog = console.log.bind(console);
+
+      // Override console.error / warn to capture and suppress extension noise.
+      console.error = function(...args){
+        try{
+          const joined = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+          if (containsFilter(joined)) {
+            window.__suppressedLogs.push({type:'error', msg: joined, time: Date.now()});
+            // Still write a subtle debug line to original console.debug so devs can find it if needed
+            if (console.debug) console.debug('[suppressed error] (use debug panel)');
+            return; // suppress
+          }
+        }catch(e){}
+        _origConsoleError(...args);
+      };
+      console.warn = function(...args){
+        try{
+          const joined = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+          if (containsFilter(joined)) { window.__suppressedLogs.push({type:'warn', msg: joined, time: Date.now()}); if (console.debug) console.debug('[suppressed warn]'); return; }
+        }catch(e){}
+        _origConsoleWarn(...args);
+      };
+
+      // Global error / rejection handlers to swallow and log unwanted extension errors
+      window.addEventListener('error', function(e){
+        try{
+          const m = (e && (e.message || e.error && e.error.message)) || e?.toString();
+          if (containsFilter(m)) {
+            window.__suppressedLogs.push({type:'errorEvent', msg: m, stack: e.error && e.error.stack, time: Date.now()});
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return false;
+          }
+        }catch(err){}
+        // allow other errors to propagate normally
+      }, true);
+
+      window.addEventListener('unhandledrejection', function(e){
+        try{
+          const reason = e?.reason;
+          const m = (reason && (reason.message || String(reason))) || String(e);
+          if (containsFilter(m)) {
+            window.__suppressedLogs.push({type:'unhandledrejection', msg: m, reason: reason, time: Date.now()});
+            e.preventDefault();
+            return false;
+          }
+        }catch(err){}
+      }, true);
+
+      // Optional: small helper to check if an extension is present
+      window.__detectWalletPresence = function(){
+        try { return !!(window.ethereum || window.web3); } catch(e){ return false; }
+      };
+    })();
+  </script>
+
+  <!-- Load libraries AFTER we installed error suppression -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.4/dist/mindar-image-aframe.prod.js"></script>
+
   <style>
-    :root { --ui-bg: rgba(0,0,0,.55); --ui-text:#fff; }
-    html, body { margin:0; padding:0; height:100%; background:#000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-    a-scene { position: fixed; inset: 0; }
+    :root { --ui-bg: rgba(0,0,0,.6); --ui-text: #fff; }
+    html,body { height:100%; margin:0; padding:0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial; background:#000 }
+    a-scene { position:fixed; inset:0; }
 
-    /* Buttons */
-    .btn { display:inline-flex; align-items:center; gap:.5rem; padding:.7rem 1rem; border-radius:999px; border:1px solid rgba(255,255,255,.25);
-           background: var(--ui-bg); color: var(--ui-text); text-decoration:none; font-weight:600; cursor:pointer; }
-    .btn:hover { border-color: rgba(255,255,255,.6); }
-    #startBtn { position:fixed; inset:0; display:grid; place-items:center; z-index:20; background: rgba(0,0,0,.7); }
-    #startBtn > div { text-align:center; color:#fff; max-width: 92vw; }
-    #startBtn > div h2 { margin:.2rem 0 0.6rem; }
-    #startBtn > div p { opacity:.9; margin:.2rem 0 .8rem; }
+    /* Simple UI */
+    .center { position:fixed; inset:0; display:grid; place-items:center; z-index:30; }
+    .card { background: rgba(0,0,0,.7); padding:18px; border-radius:12px; text-align:center; color:var(--ui-text); max-width:92vw; }
+    .btn { display:inline-flex; gap:.6rem; align-items:center; padding:.6rem .9rem; border-radius:999px; border:1px solid rgba(255,255,255,.16); background:var(--ui-bg); color:var(--ui-text); cursor:pointer; font-weight:600; }
 
-    /* Contact bar (example links) */
-    .bottombar { position: fixed; left:0; right:0; bottom: 10px; display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; z-index:15; }
+    .bottombar{ position:fixed; left:0; right:0; bottom:12px; display:flex; gap:.6rem; justify-content:center; z-index:25; }
+    #debugPanel{ position: fixed; right:12px; top:12px; width:min(92vw,380px); max-height:56vh; overflow:auto; background:var(--ui-bg); color:var(--ui-text); padding:.6rem; border-radius:10px; border:1px solid rgba(255,255,255,.12); z-index:40; display:none; font-size:.85rem; }
+    #debugToggle{ position:fixed; right:12px; bottom:12px; z-index:41; }
 
-    /* Debug panel */
-    #debugPanel { position: fixed; right: 10px; top: 10px; width: min(92vw, 380px); max-height: 60vh; overflow:auto; z-index: 25; color:#fff; background: var(--ui-bg);
-                  border:1px solid rgba(255,255,255,.25); border-radius: 12px; padding:.6rem .8rem; font-size:.85rem; display:none; }
-    #debugPanel pre { white-space: pre-wrap; word-break: break-word; margin: .4rem 0; }
-    #debugToggle { position: fixed; right: 10px; bottom: 10px; z-index: 26; }
-
-    /* Make MindAR's scanning overlay transparent (no blue screen / QR-box UI) */
+    /* Hide MindAR's colored scanning UI */
     .mindar-ui-overlay, .mindar-ui-scanning { background: transparent !important; }
-    .mindar-ui-scanning .scanning, .mindar-ui-scanning .scanning .inner, .mindar-ui-scanning .scanning .scanline { background: transparent !important; opacity: .0 !important; }
-    .mindar-ui-loading { background: rgba(0,0,0,.4) !important; }
-    .mindar-ui-loading .loader { filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
+    .mindar-ui-scanning .scanning, .mindar-ui-scanning .scanning .inner, .mindar-ui-scanning .scanning .scanline { background: transparent !important; opacity: .0 !important }
+    .mindar-ui-loading { background: rgba(0,0,0,.4) !important }
   </style>
 </head>
 <body>
 
-  <!-- Start gate (gets camera/media permission via gesture) -->
-  <div id="startBtn">
-    <div>
-      <h2>Start AR Experience</h2>
-      <p>Tap Start, allow camera access, and point at your business card.</p>
+  <div class="center" id="startGate">
+    <div class="card">
+      <h2 style="margin:.2rem 0 .6rem;">Start AR Experience</h2>
+      <p style="opacity:.95; margin:.2rem 0 .8rem;">Tap Start, allow camera access, and point at your business card.</p>
       <div style="display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap;">
-        <button class="btn" id="startAction">Start</button>
-        <button class="btn" id="resetAction" title="Stop and restart AR system">Reset AR</button>
-        <button class="btn" id="debugToggle">Show Debug</button>
+        <button class="btn" id="startBtn">Start</button>
+        <button class="btn" id="resetBtn">Reset AR</button>
+        <button class="btn" id="debugBtn">Show Debug</button>
       </div>
     </div>
   </div>
 
-  <!-- Contact buttons (edit URLs) -->
-  <div class="bottombar" id="contactBar">
+  <div class="bottombar">
     <a class="btn" href="https://your-website.example" target="_blank" rel="noopener">🌐 Website</a>
     <a class="btn" href="https://instagram.com/yourhandle" target="_blank" rel="noopener">📸 Instagram</a>
-    <a class="btn" href="https://facebook.com/yourhandle" target="_blank" rel="noopener">📘 Facebook</a>
-    <a class="btn" href="https://www.tiktok.com/@yourhandle" target="_blank" rel="noopener">🎵 TikTok</a>
-    <a class="btn" href="tel:+66123456789">📞 Call</a>
     <a class="btn" href="mailto:hello@yourdomain.com?subject=Property%20Inquiry">✉️ Email</a>
   </div>
 
-  <!-- Debug panel -->
   <div id="debugPanel"></div>
 
-  <!-- AR Scene -->
-  <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiScanning: false; uiLoading: true;"
-    embedded
-    color-space="sRGB"
-    renderer="precision: mediump; antialias: true; alpha: false; colorManagement: true; physicallyCorrectLights: true"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: true"
-    id="scene">
+  <!-- AR scene: keep uiScanning off to avoid the blue scanning overlay -->
+  <a-scene id="scene"
+           mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiScanning: false; uiLoading: true;"
+           embedded
+           color-space="sRGB"
+           renderer="precision: mediump; antialias: true; alpha: false; colorManagement: true; physicallyCorrectLights: true"
+           vr-mode-ui="enabled: false"
+           device-orientation-permission-ui="enabled: true">
 
     <a-assets timeout="25000">
       <a-asset-item id="avatarGLB" src="./assets/avatar.glb" crossorigin="anonymous"></a-asset-item>
@@ -87,175 +149,121 @@
       <a-entity id="avatar" gltf-model="#avatarGLB" position="0 0 0" scale="0.28 0.28 0.28" rotation="0 180 0" animation-mixer></a-entity>
       <a-video id="videoPlane" src="#propVideo" width="0.98" height="0.55" position="0 0.5 0" rotation="-10 0 0" material="shader: flat"></a-video>
     </a-entity>
+
   </a-scene>
 
   <script>
-    // ===== Utility / Debug =====
-    const $ = (s) => document.querySelector(s);
-    const log = (msg, obj) => {
-      const p = $('#debugPanel');
-      if (!p) return;
-      p.style.display = 'block';
+    // Small helpers
+    const $ = (s)=>document.querySelector(s);
+    const logToDebug = (msg, data)=>{
+      const panel = $('#debugPanel');
+      if (!panel) return;
+      panel.style.display = 'block';
       const pre = document.createElement('pre');
-      pre.textContent = `[${new Date().toLocaleTimeString()}] ${msg}${obj?`: ${stringify(obj)}`:''}`;
-      p.appendChild(pre);
+      pre.textContent = `[${new Date().toLocaleTimeString()}] ${msg}${data? ' — ' + (typeof data === 'string' ? data : JSON.stringify(data,null,2)):''}`;
+      panel.appendChild(pre);
+      panel.scrollTop = panel.scrollHeight;
     };
-    const stringify = (v)=>{ try { return typeof v === 'string' ? v : JSON.stringify(v, null, 2);} catch{ return String(v);} };
 
-    // Ignore unrelated extension errors (e.g., MetaMask) so they don't distract the UX/tests
-    window.addEventListener('error', (e)=>{
-      if (String(e?.message||'').toLowerCase().includes('metamask')) { log('Ignoring extension error', e.message); e.preventDefault(); }
-    });
-    window.addEventListener('unhandledrejection', (e)=>{
-      const msg = String(e?.reason?.message || e?.reason || '').toLowerCase();
-      if (msg.includes('metamask')) { log('Ignoring extension rejection', e.reason); e.preventDefault(); }
-    });
-
-    // ===== Preflight Tests ("test cases") =====
-    async function testHTTPS(){
-      const https = location.protocol === 'https:' || location.hostname === 'localhost';
-      log('Test: HTTPS or localhost', { result: https, protocol: location.protocol, host: location.host });
-      return https;
-    }
-    async function testWebGL(){
-      let gl = null; try { const c = document.createElement('canvas'); gl = c.getContext('webgl') || c.getContext('experimental-webgl'); } catch {}
-      log('Test: WebGL available', { result: !!gl });
-      if (!gl) alert('WebGL is not available/enabled. Please enable hardware acceleration or try another browser.');
-      return !!gl;
-    }
-    async function testPermissions(){
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-        log('Test: getUserMedia ❌', 'navigator.mediaDevices.getUserMedia is not available');
-        alert('Camera API not available in this browser.');
-        return false;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
-        // immediately stop preview tracks; MindAR will open its own stream
-        stream.getTracks().forEach(t => t.stop());
-        log('Test: getUserMedia ✅');
-        return true;
-      } catch (err) {
-        log('Test: getUserMedia ❌', { name: err.name, message: err.message });
-        alert('Camera permission is required. Please allow camera access in your browser settings and reload.');
-        return false;
-      }
-    }
-    async function testAssets(){
-      async function headOK(url){ try { const r = await fetch(url, { method:'HEAD' }); return r.ok; } catch { return false; } }
-      const results = {
-        targets: await headOK('./targets.mind'),
-        avatar: await headOK('./assets/avatar.glb'),
-        video: await headOK('./assets/properties.mp4')
-      };
-      log('Test: assets existence', results);
-      if (!results.targets) alert('Missing targets.mind (AR image target). Place it at ./targets.mind');
-      return results.targets && results.avatar && results.video;
-    }
-    async function testAutoplayPolicy(){
-      const v = document.getElementById('propVideo');
-      try { await v.play(); log('Test: Video autoplay (muted) ✅'); v.pause(); } catch(e){ log('Test: Video autoplay (muted) ❌', e?.message||e); }
-      return true; // non-fatal
-    }
-    function testExtensionPresence(){
-      const hasWallet = !!window.ethereum; // MetaMask / wallets inject this
-      log('Test: Wallet extension detected', { ethereum: hasWallet });
-      return true; // informational
+    // Expose suppressed logs captured by early script
+    function flushSuppressedLogs(){
+      try{
+        if (Array.isArray(window.__suppressedLogs) && window.__suppressedLogs.length){
+          window.__suppressedLogs.forEach(s => logToDebug('[suppressed]', s));
+          window.__suppressedLogs.length = 0;
+        }
+      }catch(e){ console.warn('flushSuppressedLogs failed', e); }
     }
 
-    // ===== Startup / Control =====
-    const sceneEl = $('#scene');
+    // Preflight tests (kept as requested)
+    async function testHTTPS(){ const ok = location.protocol === 'https:' || location.hostname === 'localhost'; logToDebug('Test: HTTPS or localhost', {result: ok, protocol: location.protocol}); return ok; }
+    async function testWebGL(){ let gl=null; try{ const c=document.createElement('canvas'); gl = c.getContext('webgl') || c.getContext('experimental-webgl'); }catch{} const ok=!!gl; logToDebug('Test: WebGL', {result: ok}); if(!ok) alert('WebGL unavailable'); return ok; }
+    async function testPermissions(){ if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ logToDebug('Test: getUserMedia', 'API missing'); alert('Camera API missing'); return false; } try{ const s = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}}); s.getTracks().forEach(t=>t.stop()); logToDebug('Test: getUserMedia', 'ok'); return true; }catch(e){ logToDebug('Test: getUserMedia', {name:e.name, message:e.message}); alert('Please allow camera access'); return false; } }
+    async function testAssets(){ async function headOK(url){ try{ const r = await fetch(url, {method:'HEAD'}); return r.ok; }catch{ return false; }} const res = {targets: await headOK('./targets.mind'), avatar: await headOK('./assets/avatar.glb'), video: await headOK('./assets/properties.mp4')}; logToDebug('Test: assets', res); if(!res.targets) alert('Missing targets.mind at ./targets.mind'); return res; }
+    async function testAutoplay(){ const v = $('#propVideo'); try{ await v.play(); logToDebug('Test: autoplay (muted)', 'ok'); v.pause(); }catch(e){ logToDebug('Test: autoplay (muted)', {err: e.message||e}); } return true; }
+    function testExtension(){ const present = !!(window.ethereum || window.web3 || window.__detectWalletPresence && window.__detectWalletPresence()); logToDebug('Test: wallet extension present', {present}); return present; }
+    function testConsoleFilter(){ // ensure early suppression captured a simulated error
+      // Push a synthetic message into console and see if it ends up suppressed (our early override records it)
+      try{
+        console.error('s: Failed to connect to MetaMask (simulated test)');
+        const suppressed = Array.isArray(window.__suppressedLogs) && window.__suppressedLogs.some(x=>String(x.msg||'').toLowerCase().includes('metamask'));
+        logToDebug('Test: console filter', {suppressed});
+        return suppressed;
+      }catch(e){ logToDebug('Test: console filter error', e.message||e); return false; }
+    }
+
+    // Lifecycle
+    const scene = $('#scene');
     const anchor = $('#anchor');
-    const startGate = $('#startBtn');
-    const startAction = $('#startAction');
-    const resetAction = $('#resetAction');
-    const debugPanel = $('#debugPanel');
-    const debugToggle = $('#debugToggle');
+    const startGate = $('#startGate');
+    const startBtn = $('#startBtn');
+    const resetBtn = $('#resetBtn');
+    const debugBtn = $('#debugBtn');
 
-    debugToggle.addEventListener('click', ()=>{
-      debugPanel.style.display = debugPanel.style.display === 'block' ? 'none' : 'block';
-      debugToggle.textContent = debugPanel.style.display === 'block' ? 'Hide Debug' : 'Show Debug';
-    });
-
-    sceneEl.addEventListener('loaded', ()=> log('A-Frame scene loaded'));
-    sceneEl.addEventListener('arReady', ()=> log('MindAR arReady ✅'));
-    sceneEl.addEventListener('arError', (e)=> log('MindAR arError ❌', e?.detail || e));
-    anchor.addEventListener('targetFound', ()=> log('Target Found'));
-    anchor.addEventListener('targetLost', ()=> log('Target Lost'));
+    // Scene events
+    scene.addEventListener('loaded', ()=> logToDebug('A-Frame scene loaded'));
+    scene.addEventListener('arReady', ()=> logToDebug('MindAR arReady'));
+    scene.addEventListener('arError', (e)=> logToDebug('MindAR arError', e && e.detail ? e.detail : e));
+    anchor.addEventListener('targetFound', ()=> logToDebug('Target Found'));
+    anchor.addEventListener('targetLost', ()=> logToDebug('Target Lost'));
 
     async function startMindAR(){
-      if (!sceneEl.systems || !sceneEl.systems['mindar-image-system']) {
-        await new Promise(res => sceneEl.addEventListener('loaded', res, { once: true }));
+      // Ensure systems are ready
+      if (!scene.systems || !scene.systems['mindar-image-system']){
+        await new Promise(r=> scene.addEventListener('loaded', r, {once:true}));
       }
-      try {
-        await sceneEl.systems['mindar-image-system'].start();
-        log('MindAR started ✅');
-      } catch (e) {
-        log('Failed to start MindAR', { name: e.name, message: e.message });
-        alert('Failed to start AR. Check camera permissions and that targets.mind exists.');
-      }
+      try{
+        await scene.systems['mindar-image-system'].start();
+        logToDebug('MindAR started');
+      }catch(e){ logToDebug('startMindAR failed', {name:e.name, msg:e.message}); alert('Failed to start AR — check camera permissions and targets.mind'); }
     }
-    async function stopMindAR(){
-      try {
-        if (sceneEl.systems && sceneEl.systems['mindar-image-system']) {
-          await sceneEl.systems['mindar-image-system'].stop();
-          log('MindAR stopped ⏹️');
-        }
-      } catch (e) { log('Failed to stop MindAR', { name: e.name, message: e.message }); }
-    }
+    async function stopMindAR(){ try{ if (scene.systems && scene.systems['mindar-image-system']){ await scene.systems['mindar-image-system'].stop(); logToDebug('MindAR stopped'); } }catch(e){ logToDebug('stopMindAR failed', e.message||e); } }
 
     async function boot(){
-      const okHTTPS = await testHTTPS(); if (!okHTTPS) { alert('This page must be served over HTTPS (or localhost) to access the camera.'); return; }
-      const okWebGL = await testWebGL(); if (!okWebGL) return;
-      const okPerm = await testPermissions(); if (!okPerm) return;
-      await testAssets();
-      testExtensionPresence();
-      await testAutoplayPolicy();
+      // show any suppressed extension logs first
+      flushSuppressedLogs();
+
+      const ok1 = await testHTTPS(); if(!ok1){ alert('Serve the page via HTTPS or use localhost'); return; }
+      const ok2 = await testWebGL(); if(!ok2) return;
+      const ok3 = await testPermissions(); if(!ok3) return;
+      const assets = await testAssets();
+      testExtension();
+      await testAutoplay();
+      testConsoleFilter();
+
       await startMindAR();
-      // Prime property video muted (iOS-friendly)
-      const v = document.getElementById('propVideo');
-      try { await v.play(); } catch {}
+      // prime video (muted)
+      const v = $('#propVideo'); try{ await v.play(); }catch{}
     }
 
-    startAction.addEventListener('click', async () => {
-      startGate.style.display = 'none';
-      await boot();
-    });
+    startBtn.addEventListener('click', async ()=>{ startGate.style.display='none'; await boot(); });
+    resetBtn.addEventListener('click', async ()=>{ await stopMindAR(); startGate.style.display='grid'; logToDebug('Reset: AR stopped'); });
+    debugBtn.addEventListener('click', ()=>{ const panel = $('#debugPanel'); panel.style.display = panel.style.display==='block' ? 'none' : 'block'; debugBtn.textContent = panel.style.display==='block' ? 'Hide Debug' : 'Show Debug'; flushSuppressedLogs(); });
 
-    resetAction.addEventListener('click', async () => {
-      await stopMindAR();
-      startGate.style.display = 'grid';
-      log('AR reset. Tap Start to begin again.');
-    });
+    // convenience: allow tap anywhere to auto-start on mobile
+    window.addEventListener('touchend', function autoStartOnce(){ if (startGate.style.display !== 'none'){ startBtn.click(); } window.removeEventListener('touchend', autoStartOnce); }, { passive:true });
 
-    // Convenience: start after first tap anywhere
-    window.addEventListener('touchend', function autoStartOnce(){
-      if (startGate.style.display !== 'none') { startAction.click(); }
-      window.removeEventListener('touchend', autoStartOnce);
-    }, { passive:true });
+    // Final note: if you still see "Failed to connect to MetaMask" in the browser UI, it is coming from a browser extension.
+    // Disable the extension (or run in an Incognito window with extensions disabled) to fully eliminate the message.
   </script>
 
   <!--
-  HOW TO USE
-  1) Place files:
-     - ./targets.mind                  (trained from your business card image)
-     - ./assets/avatar.glb             (3D avatar model, ~<10MB if possible)
-     - ./assets/properties.mp4         (H.264 MP4, 1080p, ~4–6 Mbps, AAC)
-  2) Edit the contact links above.
-  3) Host over HTTPS (GitHub Pages, Netlify, Vercel). Camera won’t work on plain http.
+    HOW TO USE
+    1) Required files (place in same folder):
+       - ./targets.mind        (compiled from your business card image using MindAR target compiler)
+       - ./assets/avatar.glb  (3D avatar)
+       - ./assets/properties.mp4 (promo video)
+    2) Host on HTTPS or run on localhost.
+    3) Click Start and allow camera.
 
-  TEST CASES (built-in preflight):
-  - Test: HTTPS or localhost (must be true for camera)
-  - Test: WebGL available (GPU rendering)
-  - Test: getUserMedia (camera permission)
-  - Test: assets existence (targets.mind, avatar.glb, properties.mp4)
-  - Test: Video autoplay (muted)
-  - Test: Wallet extension detected (informational)
-
-  NOTES
-  - If you see a message like "Failed to connect to MetaMask", it’s from a browser extension and unrelated to this app. Disable MetaMask (and other wallet/crypto extensions) for this page.
-  - MindAR's blue scanning overlay is disabled; you should see the live camera feed.
-  - Use the Debug panel to view test results and AR lifecycle events.
+    TESTS RUN DURING BOOT (kept + added):
+      - HTTPS or localhost
+      - WebGL available
+      - getUserMedia (camera permission)
+      - assets existence (targets.mind, avatar.glb, properties.mp4)
+      - video autoplay (muted)
+      - wallet extension presence (informational)
+      - console filter test (simulates a MetaMask message and verifies suppression)
   -->
 </body>
 </html>
