@@ -14,11 +14,21 @@
     background:#0af; color:white; cursor:pointer; z-index:1000;
   }
   .hover-glow:hover { opacity:0.8; transform:scale(1.2); transition: all 0.3s ease; }
+  #markerOverlay {
+    position:absolute; top:50%; left:50%;
+    width:60%; height:60%;
+    border: 2px dashed yellow;
+    transform:translate(-50%, -50%);
+    pointer-events:none;
+    z-index:999;
+    box-sizing:border-box;
+  }
 </style>
 </head>
 <body>
 
 <button id="startButton">Start AR</button>
+<div id="markerOverlay"></div>
 
 <a-scene embedded vr-mode-ui="enabled: false"
          renderer="antialias: true; alpha: true"
@@ -39,7 +49,7 @@
     </a-entity>
 
     <!-- Website Button -->
-    <a-entity id="btn-website" gltf-model="model/button_facebook.glb"
+    <a-entity id="btn-website" gltf-model="model/button_website.glb"
               scale="0.12 0.12 0.12" position="-0.35 0 0" rotation="0 180 0"
               class="clickable hover-glow" visible="false">
       <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
@@ -66,11 +76,10 @@ const avatar = document.querySelector('#avatar');
 const websiteBtn = document.querySelector('#btn-website');
 const linkedinBtn = document.querySelector('#btn-linkedin');
 const marker = document.querySelector('#businessMarker');
-const scene = document.querySelector('a-scene');
+const markerOverlay = document.querySelector('#markerOverlay');
 
 startBtn.addEventListener('click', () => {
   startBtn.style.display = 'none';
-  // User gesture triggers mobile camera permission
 });
 
 // Show avatar/buttons when marker detected
@@ -78,6 +87,7 @@ marker.addEventListener('markerFound', () => {
   avatar.setAttribute('visible', 'true');
   websiteBtn.setAttribute('visible', 'true');
   linkedinBtn.setAttribute('visible', 'true');
+  markerOverlay.style.display = 'none'; // hide scanning overlay
 });
 
 // Hide avatar/buttons if marker lost
@@ -85,6 +95,7 @@ marker.addEventListener('markerLost', () => {
   avatar.setAttribute('visible', 'false');
   websiteBtn.setAttribute('visible', 'false');
   linkedinBtn.setAttribute('visible', 'false');
+  markerOverlay.style.display = 'block'; // show scanning overlay
 });
 
 // Click events
