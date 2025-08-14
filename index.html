@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AR.js Mobile Test</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AR Business Card</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
 <script src="https://cdn.rawgit.com/AR-js-org/AR.js/3.3.2/aframe/build/aframe-ar.js"></script>
 <style>
@@ -13,6 +13,7 @@
     font-size:22px; padding:15px 30px; border:none; border-radius:8px;
     background:#0af; color:white; cursor:pointer; z-index:1000;
   }
+  .hover-glow:hover { opacity:0.8; transform:scale(1.2); transition: all 0.3s ease; }
 </style>
 </head>
 <body>
@@ -20,26 +21,91 @@
 <button id="startButton">Start AR</button>
 
 <a-scene embedded vr-mode-ui="enabled: false"
+         renderer="antialias: true; alpha: true"
          arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true; detectionMode: mono;">
-  <a-marker type="pattern" url="img/business-card.patt" id="marker">
-    <a-box id="avatar" position="0 0.5 0" color="red" visible="false"></a-box>
+
+  <!-- Business Card Marker -->
+  <a-marker type="pattern" url="img/business-card.patt" id="businessMarker">
+
+    <!-- Avatar -->
+    <a-entity id="avatar" gltf-model="model/avatar.glb"
+              scale="0.3 0.3 0.3" position="0 0 0" rotation="0 180 0"
+              animation="property: rotation; to: 0 190 0; dir: alternate; dur: 2000; loop: true"
+              visible="false">
+    </a-entity>
+
+    <!-- Website Button -->
+    <a-entity id="btn-website" gltf-model="model/button_website.glb"
+              scale="0.12 0.12 0.12" position="-0.35 0 0" rotation="0 180 0"
+              class="clickable hover-glow" visible="false">
+      <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
+                   to="-0.35 0.08 0"></a-animation>
+    </a-entity>
+
+    <!-- LinkedIn Button -->
+    <a-entity id="btn-linkedin" gltf-model="model/button_linkedin.glb"
+              scale="0.12 0.12 0.12" position="0.35 0 0" rotation="0 180 0"
+              class="clickable hover-glow" visible="false">
+      <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
+                   to="0.35 0.08 0"></a-animation>
+    </a-entity>
+
   </a-marker>
-  <a-entity camera></a-entity>
+
+  <!-- Camera -->
+  <a-entity camera position="0 0 0"></a-entity>
+
 </a-scene>
 
 <script>
 const startBtn = document.querySelector('#startButton');
 const avatar = document.querySelector('#avatar');
-const marker = document.querySelector('#marker');
+const websiteBtn = document.querySelector('#btn-website');
+const linkedinBtn = document.querySelector('#btn-linkedin');
+const marker = document.querySelector('#businessMarker');
+const scene = document.querySelector('a-scene');
 
 startBtn.addEventListener('click', () => {
-  // On mobile, this user gesture triggers camera
+  // This user gesture triggers camera permission
   startBtn.style.display = 'none';
-  // For AR.js 3.3.2, camera starts automatically after gesture
 });
 
-marker.addEventListener('markerFound', () => { avatar.setAttribute('visible', 'true'); });
-marker.addEventListener('markerLost', () => { avatar.setAttribute('visible', 'false'); });
+// Show avatar/buttons when marker detected
+marker.addEventListener('markerFound', () => {
+  avatar.setAttribute('visible', 'true');
+  websiteBtn.setAttribute('visible', 'true');
+  linkedinBtn.setAttribute('visible', 'true');
+
+  // Hide debug scanning UI after detection
+  scene.components['arjs'].arToolkitContext.arController.debugUIRoot &&
+    (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'none');
+});
+
+// Hide avatar/buttons if marker lost
+marker.addEventListener('markerLost', () => {
+  avatar.setAttribute('visible', 'false');
+  websiteBtn.setAttribute('visible', 'false');
+  linkedinBtn.setAttribute('visible', 'false');
+
+  // Show debug scanning UI again
+  scene.components['arjs'].arToolkitContext.arController.debugUIRoot &&
+    (scene.components['arjs'].arToolkitContext.arController.debugUIRoot.style.display = 'block');
+});
+
+// Button click events
+websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
+linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
+
+// Smooth rotation for buttons
+const rotateButton = (el) => {
+  let angle = 0;
+  setInterval(() => {
+    angle += 1;
+    el.setAttribute('rotation', `0 ${180 + angle} 0`);
+  }, 50);
+};
+rotateButton(websiteBtn);
+rotateButton(linkedinBtn);
 </script>
 
 </body>
