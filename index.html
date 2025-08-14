@@ -1,25 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>AR Business Card Mobile</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
-  <style>
-    body { margin:0; overflow:hidden; text-align:center; font-family: sans-serif; background:#111; color:white; }
-    #startButton {
-      font-size: 22px; padding:15px 30px; margin-top: 20%; cursor:pointer;
-      border:none; border-radius:8px; background: #0af; color:white;
-    }
-    .hover-glow:hover { opacity:0.8; scale:1.2 1.2 1.2; transition: all 0.3s ease; }
-  </style>
+<meta charset="UTF-8">
+<title>AR Business Card Mobile Fixed</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
+<style>
+  body { margin:0; overflow:hidden; text-align:center; font-family: sans-serif; background:#111; color:white; }
+  #startButton {
+    font-size: 22px; padding:15px 30px; margin-top: 20%; cursor:pointer;
+    border:none; border-radius:8px; background: #0af; color:white;
+  }
+  .hover-glow:hover { opacity:0.8; scale:1.2 1.2 1.2; transition: all 0.3s ease; }
+</style>
 </head>
 <body>
 
 <h2>Click to Start AR</h2>
 <button id="startButton">Start AR</button>
-
 <div id="arContainer" style="width:100%; height:100%; display:none;"></div>
 
 <script>
@@ -29,60 +28,69 @@ document.querySelector('#startButton').addEventListener('click', () => {
   const container = document.querySelector('#arContainer');
   container.style.display = 'block';
 
-  container.innerHTML = `
-  <a-scene
-    embedded
-    vr-mode-ui="enabled: false"
-    renderer="antialias: true; alpha: true"
-    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix;">
-    
-    <!-- Business Card Marker -->
-    <a-marker type="pattern" url="img/business-card.patt">
-      
-      <!-- 3D Avatar -->
-      <a-entity id="avatar" gltf-model="model/avatar.glb"
-                scale="0.4 0.4 0.4"
-                position="0 0 0"
-                rotation="0 180 0"
-                animation="property: rotation; to: 0 190 0; dir: alternate; dur: 2000; loop: true">
-      </a-entity>
+  // Create AR scene dynamically
+  const scene = document.createElement('a-scene');
+  scene.setAttribute('embedded', '');
+  scene.setAttribute('vr-mode-ui', 'enabled: false');
+  scene.setAttribute('renderer', 'antialias: true; alpha: true');
+  scene.setAttribute('arjs', 'trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix');
 
-      <!-- Website Button -->
-      <a-entity id="btn-website" gltf-model="model/button_website.glb"
-                scale="0.15 0.15 0.15"
-                position="-0.4 0 0"
-                rotation="0 180 0"
-                class="clickable hover-glow">
-        <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
-                     to="-0.4 0.1 0"></a-animation>
-      </a-entity>
+  // Camera
+  const camera = document.createElement('a-entity');
+  camera.setAttribute('camera', '');
+  scene.appendChild(camera);
 
-      <!-- LinkedIn Button -->
-      <a-entity id="btn-linkedin" gltf-model="model/button_linkedin.glb"
-                scale="0.15 0.15 0.15"
-                position="0.4 0 0"
-                rotation="0 180 0"
-                class="clickable hover-glow">
-        <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
-                     to="0.4 0.1 0"></a-animation>
-      </a-entity>
+  // Business card marker
+  const marker = document.createElement('a-marker');
+  marker.setAttribute('type', 'pattern');
+  marker.setAttribute('url', 'img/business-card.patt');
 
-    </a-marker>
+  // Avatar
+  const avatar = document.createElement('a-entity');
+  avatar.setAttribute('gltf-model', 'model/avatar.glb');
+  avatar.setAttribute('scale', '0.4 0.4 0.4');
+  avatar.setAttribute('rotation', '0 180 0');
+  avatar.setAttribute('position', '0 0 0');
+  avatar.setAttribute('animation', 'property: rotation; to: 0 190 0; dir: alternate; dur: 2000; loop: true');
+  marker.appendChild(avatar);
 
-    <!-- Fallback Hiro Marker -->
-    <a-marker preset="hiro" visible="true">
-      <a-box position="0 0.5 0" color="blue" scale="0.5 0.5 0.5"></a-box>
-    </a-marker>
+  // Website button
+  const websiteBtn = document.createElement('a-entity');
+  websiteBtn.setAttribute('gltf-model', 'model/button_website.glb');
+  websiteBtn.setAttribute('scale', '0.15 0.15 0.15');
+  websiteBtn.setAttribute('position', '-0.4 0 0');
+  websiteBtn.setAttribute('rotation', '0 180 0');
+  websiteBtn.classList.add('clickable', 'hover-glow');
+  websiteBtn.innerHTML = `<a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite" to="-0.4 0.1 0"></a-animation>`;
+  marker.appendChild(websiteBtn);
 
-    <a-entity camera></a-entity>
-  </a-scene>
-  `;
+  // LinkedIn button
+  const linkedinBtn = document.createElement('a-entity');
+  linkedinBtn.setAttribute('gltf-model', 'model/button_linkedin.glb');
+  linkedinBtn.setAttribute('scale', '0.15 0.15 0.15');
+  linkedinBtn.setAttribute('position', '0.4 0 0');
+  linkedinBtn.setAttribute('rotation', '0 180 0');
+  linkedinBtn.classList.add('clickable', 'hover-glow');
+  linkedinBtn.innerHTML = `<a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite" to="0.4 0.1 0"></a-animation>`;
+  marker.appendChild(linkedinBtn);
 
-  // Add click events and rotation
-  setTimeout(() => { // wait for scene to load
-    const websiteBtn = document.querySelector('#btn-website');
-    const linkedinBtn = document.querySelector('#btn-linkedin');
+  scene.appendChild(marker);
 
+  // Fallback Hiro marker
+  const fallback = document.createElement('a-marker');
+  fallback.setAttribute('preset', 'hiro');
+  fallback.setAttribute('visible', 'true');
+  const fallbackBox = document.createElement('a-box');
+  fallbackBox.setAttribute('position', '0 0.5 0');
+  fallbackBox.setAttribute('color', 'blue');
+  fallbackBox.setAttribute('scale', '0.5 0.5 0.5');
+  fallback.appendChild(fallbackBox);
+  scene.appendChild(fallback);
+
+  container.appendChild(scene);
+
+  // Wait a bit then add click events and rotation
+  setTimeout(() => {
     const rotateButton = (el) => {
       let angle = 0;
       setInterval(() => {
@@ -90,19 +98,5 @@ document.querySelector('#startButton').addEventListener('click', () => {
         el.setAttribute('rotation', `0 ${180 + angle} 0`);
       }, 50);
     };
-
     if(websiteBtn){
-      websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
-      rotateButton(websiteBtn);
-    }
-    if(linkedinBtn){
-      linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
-      rotateButton(linkedinBtn);
-    }
-  }, 1000);
-
-});
-</script>
-
-</body>
-</html>
+      websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '
