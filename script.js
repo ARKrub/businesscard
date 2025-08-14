@@ -38,12 +38,12 @@ function init() {
   scene.add(markerRoot);
   let markerControls = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
     type: 'pattern',
-    patternUrl: 'img/business-card.patt' // Your marker pattern file
+    patternUrl: 'business-card.patt' // Your marker pattern file
   });
 
   // Add a simple 3D model
   let loader = new THREE.GLTFLoader();
-  loader.load('model/avatar.glb', function(gltf){
+  loader.load('gentleman_hellboy.glb', function(gltf){
     gltf.scene.scale.set(0.5, 0.5, 0.5);
     markerRoot.add(gltf.scene);
   });
