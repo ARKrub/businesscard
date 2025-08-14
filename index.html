@@ -2,15 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AR Business Card</title>
+  <title>AR Business Card Tester</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
 </head>
 <body style="margin:0; overflow:hidden;">
 
-<a-scene embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true;">
-
-  <!-- Custom Business Card Marker -->
+<a-scene
+  vr-mode-ui="enabled: false"
+  embedded
+  arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true;"
+>
+  <!-- Business Card Marker -->
   <a-marker type="pattern" url="img/business-card.patt">
     
     <!-- 3D Avatar -->
@@ -42,6 +45,11 @@
 
   </a-marker>
 
+  <!-- Fallback Hiro marker if business card not detected -->
+  <a-marker preset="hiro" visible="true">
+    <a-box position="0 0.5 0" color="blue"></a-box>
+  </a-marker>
+
   <a-entity camera></a-entity>
 </a-scene>
 
@@ -51,19 +59,29 @@ document.addEventListener('DOMContentLoaded', () => {
   const linkedinBtn = document.querySelector('#btn-linkedin');
 
   // Button click events
-  websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
-  linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
+  if(websiteBtn){
+    websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
+    const rotateButton = (el) => {
+      let angle = 0;
+      setInterval(() => {
+        angle += 1;
+        el.setAttribute('rotation', `0 ${180 + angle} 0`);
+      }, 50);
+    };
+    rotateButton(websiteBtn);
+  }
 
-  // Rotate buttons slowly
-  const rotateButton = (el) => {
-    let angle = 0;
-    setInterval(() => {
-      angle += 1;
-      el.setAttribute('rotation', `0 ${180 + angle} 0`);
-    }, 50);
-  };
-  rotateButton(websiteBtn);
-  rotateButton(linkedinBtn);
+  if(linkedinBtn){
+    linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
+    const rotateButton = (el) => {
+      let angle = 0;
+      setInterval(() => {
+        angle += 1;
+        el.setAttribute('rotation', `0 ${180 + angle} 0`);
+      }, 50);
+    };
+    rotateButton(linkedinBtn);
+  }
 });
 </script>
 
