@@ -1,91 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>AR Business Card Polished</title>
+  <title>AR.js Camera Test</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
-  <style>
-    .hover-glow:hover {
-      opacity: 0.8;
-      scale: 1.2 1.2 1.2;
-      transition: all 0.3s ease;
-    }
-  </style>
 </head>
 <body style="margin:0; overflow:hidden;">
 
 <a-scene
   vr-mode-ui="enabled: false"
   embedded
-  arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true;"
->
-
-  <!-- Business Card Marker -->
-  <a-marker type="pattern" url="img/business-card.patt">
-
-    <!-- 3D Avatar with small wave animation -->
-    <a-entity id="avatar" gltf-model="model/avatar.glb"
-              scale="0.5 0.5 0.5"
-              position="0 0 0"
-              rotation="0 180 0"
-              animation="property: rotation; to: 0 190 0; dir: alternate; dur: 2000; loop: true">
-    </a-entity>
-
-    <!-- Website Button -->
-    <a-entity id="btn-website" gltf-model="model/button_facebook.glb"
-              scale="0.2 0.2 0.2"
-              position="-0.5 0 0"
-              rotation="0 180 0"
-              class="clickable hover-glow">
-      <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
-                   to="-0.5 0.1 0"></a-animation>
-    </a-entity>
-
-    <!-- LinkedIn Button -->
-    <a-entity id="btn-linkedin" gltf-model="model/button_linkedin.glb"
-              scale="0.2 0.2 0.2"
-              position="0.5 0 0"
-              rotation="0 180 0"
-              class="clickable hover-glow">
-      <a-animation attribute="position" dur="2000" direction="alternate" repeat="indefinite"
-                   to="0.5 0.1 0"></a-animation>
-    </a-entity>
-
-  </a-marker>
-
-  <!-- Fallback Hiro marker -->
-  <a-marker preset="hiro" visible="true">
-    <a-box position="0 0.5 0" color="blue"></a-box>
+  arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true;">
+  
+  <a-marker preset="hiro">
+    <a-box position="0 0.5 0" color="red"></a-box>
   </a-marker>
 
   <a-entity camera></a-entity>
 </a-scene>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const websiteBtn = document.querySelector('#btn-website');
-  const linkedinBtn = document.querySelector('#btn-linkedin');
-
-  const rotateButton = (el) => {
-    let angle = 0;
-    setInterval(() => {
-      angle += 1;
-      el.setAttribute('rotation', `0 ${180 + angle} 0`);
-    }, 50);
-  };
-
-  if(websiteBtn){
-    websiteBtn.addEventListener('click', () => window.open('https://yourwebsite.com', '_blank'));
-    rotateButton(websiteBtn);
-  }
-
-  if(linkedinBtn){
-    linkedinBtn.addEventListener('click', () => window.open('https://linkedin.com/in/yourprofile', '_blank'));
-    rotateButton(linkedinBtn);
-  }
-});
-</script>
 
 </body>
 </html>
