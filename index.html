@@ -1,24 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AR.js Camera Test</title>
+  <title>AR.js Start Button Test</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ar.js@4.3.2/aframe/build/aframe-ar.js"></script>
 </head>
-<body style="margin:0; overflow:hidden;">
+<body style="margin:0; overflow:hidden; text-align:center;">
 
-<a-scene
-  vr-mode-ui="enabled: false"
-  embedded
-  arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true;">
-  
-  <a-marker preset="hiro">
-    <a-box position="0 0.5 0" color="red"></a-box>
-  </a-marker>
+<h2>Click to Start AR</h2>
+<button id="startButton" style="font-size:20px; padding:10px 20px;">Start AR</button>
 
-  <a-entity camera></a-entity>
-</a-scene>
+<div id="arContainer" style="width:100%; height:100%; display:none;"></div>
+
+<script>
+document.querySelector('#startButton').addEventListener('click', () => {
+  document.querySelector('#startButton').style.display = 'none';
+  const container = document.querySelector('#arContainer');
+  container.style.display = 'block';
+
+  container.innerHTML = `
+    <a-scene
+      vr-mode-ui="enabled: false"
+      embedded
+      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true;">
+      <a-marker preset="hiro">
+        <a-box position="0 0.5 0" color="red"></a-box>
+      </a-marker>
+      <a-entity camera></a-entity>
+    </a-scene>
+  `;
+});
+</script>
 
 </body>
 </html>
